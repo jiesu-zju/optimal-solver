@@ -1,0 +1,13 @@
+bench=planar5 K=8 B=80 warmup*K=24 Phase-2=56
+=== Planar5 inversion diag (warm=3, late+=25) ===
+seed,side,cost@warm,cost@late,chi@late
+0,U,1563.85,1374.47,1.18709
+1,U,1563.65,555.459,0.00521795
+2,U,2523.83,1153.83,6.34582e-13
+3,U,2481.14,1103.62,1.28999e-10
+4,D,1734.23,253.555,2.02015e-07
+5,D,2535.39,642.348,3.11133
+6,D,1556.3,227.454,4.43643e-07
+7,D,2505.17,715.66,2.94405
+best_up@warm=1563.65 best_up@late=555.459 best_down@late=227.454
+GATE inversion (down@late < 0.92*up@late): PASS

@@ -1,6 +1,5 @@
 # Re-run outputs (never commit)
 output/
-raw/
 
 # Python
 __pycache__/

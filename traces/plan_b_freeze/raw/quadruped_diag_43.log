@@ -1,0 +1,12 @@
+bench=quadruped K=4 B=80 warmup*K=8 Phase-2=72
+=== Quadruped B2 diag (warm=2, late+=30) ===
+seed,cluster,cost@warm,viol@warm,feas@warm,cost@late,viol@late,feas@late,chi@late
+0,A,23.242,0,1,23.242,0,1,2.87508
+1,A,22.926,0,1,22.926,0,1,2.87508
+2,B,120.123,0,1,13.6125,0,1,2.67068
+3,B,70.2184,0,1,9.39083,0,1,2.67068
+best_A@warm=22.926 best_A@late=22.926 (feas 2/2)
+best_B@late=9.39083 (feas 2/2)
+GATE B feasible late: PASS
+GATE inversion (B@late better than A): PASS
+OVERALL: PASS

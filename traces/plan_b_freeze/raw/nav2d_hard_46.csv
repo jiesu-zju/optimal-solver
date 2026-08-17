@@ -1,0 +1,6 @@
+bench,seed_rng,policy_name,bandit_reward,final_cost,chi,iterations_used,constraint_violation,budget_accounted,allocated,best_seed,feasible,wall_ms
+nav2d_hard,46,Uniform,feas_improve,1655.38,0.000712083,160,0.493024,1,160,6,0,902.632
+nav2d_hard,46,UCB,feas_improve,3090.47,0.113234,160,0.364726,1,160,0,0,1235.95
+nav2d_hard,46,BO-EI,feas_improve,3090.47,0.113234,160,0.364726,1,160,0,0,739.737
+nav2d_hard,46,Greedy-s_r,feas_improve,3090.47,0.113234,160,0.364726,1,160,0,0,702.754
+nav2d_hard,46,Greedy-χ,feas_improve,1106.64,0.0370813,160,0.227115,1,160,2,0,653.671
