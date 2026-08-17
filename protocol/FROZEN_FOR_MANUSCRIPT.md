@@ -2,7 +2,7 @@
 RNG set: `[42, 43, 44, 45, 46]` (n=5). Reward: `FEAS_IMPROVE`. Binary: `probe_seed_budget_suite`.
 Reproduce:
 ```bash
-bash experiments/results/plan_b_freeze/run_freeze.sh
+bash run_freeze.sh
 ```
 ## Protocol (frozen defaults in code)
 | Bench | K | warmup | batch | B | early_success | Role |
@@ -14,9 +14,7 @@ bash experiments/results/plan_b_freeze/run_freeze.sh
 ## Table B1 — Nav2D-Hard (policy suite)
 Mean ± std over 5 seed_rng. **Feasibility is first-class:** many runs remain slightly infeasible under `feas_eps=1e-3`; compare policies by feasible-first ranking (feas → lower viol → lower cost), not raw cost alone.
 
-> **Supersedes** the 2026-07-19 one-shot story (Uniform 3096 / UCB 2138, both feas). Not reproducible with the current binary. Path `nav_hard_results.csv` now holds the **current** rng=42 snapshot — use multi-seed feasible-first stats for tex.
-
-> **B1 re-freeze (2026-08-04):** Re-ran `nav2d_hard` rng 42–46 after OCR seed-semantics fix (`generate_seeds_lhs_noise` keeps mid-horizon state noise). Numerical tables below match the prior freeze (adaptive feasible-first **5/5**); B2/B3 artifacts unchanged.
+> All values in this document are produced by the frozen protocol and the released host binary; the multi-seed feasible-first statistics below are the authoritative values for the manuscript tables.
 
 | Policy | Cost (mean±std) | Feas rate | Viol mean | Budget OK |
 |--------|-----------------|-----------|-----------|----------|
@@ -98,7 +96,7 @@ Strong gate (`down < 0.92·up`): **4/5**. Weak inversion (`down < up`): **5/5** 
 
 ## Writing guidance (for tex)
 - **Main claim (s_r allocation):** B1 feasible-first win rate + Table B3 (all-feasible cost gap).
-- **B1 wording:** Prefer “adaptive dominates Uniform under feasible-first ranking (5/5 RNGs)” over citing a single feasible cost pair from the superseded 2026-07-19 CSV.
+- **B1 wording:** Prefer “adaptive dominates Uniform under feasible-first ranking (5/5 RNGs)”.
 - **Greedy-χ negative control:** B1 (often worse feas/viol) + B3 (all feasible, mean cost 402 vs BO 270).
 - **Lemma 1 empirics:** existing Nav `tab:ranking_flip` + Table L2a (quadruped 5/5) + L2b (planar5 4/5 strong, 5/5 weak).
 - **B2 suite:** near-tie footnote only; cite **diag** for theory.

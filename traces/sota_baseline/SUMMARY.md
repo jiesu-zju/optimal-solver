@@ -49,7 +49,7 @@ Cartpole Gate: force → Box-QP only；terminal cart box 仍走 ADMM。Probe: `p
 
 ## ALTRO
 
-Julia project `scripts/sota/altro_gate/`; runner `scripts/sota/run_altro.jl` (+ `run_altro.py` wrapper).
+Julia project `sota/altro_gate/`; runner `sota/run_altro.jl` (+ `run_altro.py` wrapper).
 
 - DI: continuous `ẋ=[v,u]` + RK4 ≡ Gate discrete map
 - Nav: `@autodiff SoftObsCost` + BoundConstraint boxes
@@ -59,17 +59,17 @@ Julia project `scripts/sota/altro_gate/`; runner `scripts/sota/run_altro.jl` (+ 
 
 ```bash
 cmake --build build --target bench_vs_sota
-./build/examples/bench_vs_sota --out experiments/results/sota_baseline/optimal_solver.csv
-python3 scripts/sota/run_crocoddyl.py --out experiments/results/sota_baseline/crocoddyl.csv
-python3 scripts/sota/run_aligator.py --out experiments/results/sota_baseline/aligator.csv
-julia --project=scripts/sota/altro_gate scripts/sota/run_altro.jl \
-  --out experiments/results/sota_baseline/altro.csv
-# or: python3 scripts/sota/run_altro.py --out ...
-python3 scripts/sota/compare_results.py \
-  experiments/results/sota_baseline/optimal_solver.csv \
-  experiments/results/sota_baseline/crocoddyl.csv \
-  experiments/results/sota_baseline/aligator.csv \
-  experiments/results/sota_baseline/altro.csv
+host/bin/bench_vs_sota --out traces/sota_baseline/optimal_solver.csv
+python3 sota/run_crocoddyl.py --out traces/sota_baseline/crocoddyl.csv
+python3 sota/run_aligator.py --out traces/sota_baseline/aligator.csv
+julia --project=sota/altro_gate sota/run_altro.jl \
+  --out traces/sota_baseline/altro.csv
+# or: python3 sota/run_altro.py --out ...
+python3 sota/compare_results.py \
+  traces/sota_baseline/optimal_solver.csv \
+  traces/sota_baseline/crocoddyl.csv \
+  traces/sota_baseline/aligator.csv \
+  traces/sota_baseline/altro.csv
 ```
 
 Reward / MOBO: still frozen.

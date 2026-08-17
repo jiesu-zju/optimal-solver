@@ -3,8 +3,8 @@
 
 Usage:
   python3 scripts/sota/compare_results.py \\
-    experiments/results/sota_baseline/optimal_solver.csv \\
-    experiments/results/sota_baseline/crocoddyl.csv
+    traces/sota_baseline/optimal_solver.csv \\
+    traces/sota_baseline/crocoddyl.csv
 
 Exit code 0 if Gate S2 passes for all shared problems; 1 otherwise.
 """

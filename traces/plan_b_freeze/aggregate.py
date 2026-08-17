@@ -195,7 +195,7 @@ def main() -> None:
     md.append("# Plan B — frozen for manuscript\n")
     md.append(f"RNG set: `{SEEDS}` (n={len(SEEDS)}). Reward: `FEAS_IMPROVE`. Binary: `probe_seed_budget_suite`.\n")
     md.append("Reproduce:\n")
-    md.append("```bash\nbash experiments/results/plan_b_freeze/run_freeze.sh\n```\n")
+    md.append("```bash\nbash run_freeze.sh\n```\n")
     md.append("## Protocol (frozen defaults in code)\n")
     md.append("| Bench | K | warmup | batch | B | early_success | Role |\n")
     md.append("|-------|---|--------|-------|---|---------------|------|\n")
@@ -212,9 +212,9 @@ def main() -> None:
         "(feas → lower viol → lower cost), not raw cost alone.\n\n"
     )
     md.append(
-        "> **Supersedes** the 2026-07-19 one-shot story (Uniform 3096 / UCB 2138, both feas). "
-        "Not reproducible with the current binary. Path `nav_hard_results.csv` now holds "
-        "the **current** rng=42 snapshot — use multi-seed feasible-first stats for tex.\n\n"
+        "> All values in this document are produced by the frozen protocol and the "
+        "released host binary; the multi-seed feasible-first statistics below are "
+        "the authoritative values for the manuscript tables.\n\n"
     )
     md.append("| Policy | Cost (mean±std) | Feas rate | Viol mean | Budget OK |\n")
     md.append("|--------|-----------------|-----------|-----------|----------|\n")
@@ -310,8 +310,7 @@ def main() -> None:
     )
     md.append(
         "- **B1 wording:** Prefer “adaptive dominates Uniform under feasible-first "
-        "ranking (5/5 RNGs)” over citing a single feasible cost pair from the "
-        "superseded 2026-07-19 CSV.\n"
+        "ranking (5/5 RNGs)”.\n"
     )
     md.append(
         "- **Greedy-χ negative control:** B1 (often worse feas/viol) + B3 "

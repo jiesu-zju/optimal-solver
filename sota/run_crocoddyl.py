@@ -6,7 +6,7 @@ allocate wrong xout/Fx shapes when subclassed).
 
 Usage:
   python3 scripts/sota/run_crocoddyl.py \\
-    --out experiments/results/sota_baseline/crocoddyl.csv
+    --out crocoddyl.csv
 """
 
 from __future__ import annotations

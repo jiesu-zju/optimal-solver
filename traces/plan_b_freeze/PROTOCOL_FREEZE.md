@@ -33,7 +33,7 @@ Do **not** retune \(\lambda,\eta,c\) or bench costs for table cosmetics without 
 
 ```bash
 cmake --build build --target probe_seed_budget_suite -j$(nproc)
-bash experiments/results/plan_b_freeze/run_freeze.sh
+bash run_freeze.sh
 ```
 
 Manuscript paste tables: `FROZEN_FOR_MANUSCRIPT.md`.

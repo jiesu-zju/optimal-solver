@@ -2,8 +2,8 @@
 # Fair ALTRO Gate runner — same OCP / seeds / CSV as bench_vs_sota.
 #
 #   julia --project=scripts/sota/altro_gate scripts/sota/run_altro.jl \
-#     --out experiments/results/sota_baseline/altro.csv
-#   python3 scripts/sota/run_altro.py --out experiments/results/sota_baseline/altro.csv
+#     --out altro.csv
+#   python3 sota/run_altro.py --out altro.csv
 
 using Altro
 using TrajectoryOptimization
@@ -355,7 +355,7 @@ function nav(seed::Int)
 end
 
 function main(args)
-    out = "experiments/results/sota_baseline/altro.csv"
+    out = "altro.csv"
     i = 1
     while i <= length(args)
         if args[i] == "--out" && i < length(args)

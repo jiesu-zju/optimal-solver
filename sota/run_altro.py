@@ -2,7 +2,7 @@
 """Wrapper: run ALTRO Gate Julia script and write CSV.
 
 Usage:
-  python3 scripts/sota/run_altro.py --out experiments/results/sota_baseline/altro.csv
+  python3 scripts/sota/run_altro.py --out altro.csv
 """
 
 from __future__ import annotations
@@ -20,7 +20,7 @@ PROJ = Path(__file__).resolve().parent / "altro_gate"
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--out", default="experiments/results/sota_baseline/altro.csv")
+    ap.add_argument("--out", default="altro.csv")
     ap.add_argument("--julia", default="julia")
     args = ap.parse_args()
     julia = shutil.which(args.julia)

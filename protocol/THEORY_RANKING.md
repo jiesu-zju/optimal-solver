@@ -1,7 +1,7 @@
 # Theory: Why arm ranking is not fixed (exploration / BO motivation)
 
 **Status:** foundational for PROTOCOL_v1 paper claim.  
-**Claim surface:** Propositions A–C below. Legacy “χ-Bandit primary reward” is **not** claimed.
+**Claim surface:** Propositions A–C below.
 
 ---
 
@@ -13,7 +13,7 @@
   d_i(t)=\bigl(J^{\mathrm{before}},\,J^{\mathrm{after}},\,v,\,\chi,\,b_{\mathrm{used}}\bigr).
   \]
 - Instantaneous **score** \(s(d)\) is any scalar used for greedy selection. Two scores of interest:
-  - \(s_\chi=-\log\chi\) (legacy; negative control),
+  - \(s_\chi=-\log\chi\) (negative control),
   - \(s_r=-\Delta J_{\mathrm{feas}}-\lambda\mathrm{viol}_++\eta\rho\) (PROTOCOL_v1).
 - After a fixed total budget (or equal per-arm budget), arm \(i\) has terminal feasible cost \(J_i^\star\) (∞ if never feasible).  
   **Oracle ranking** is by \(J_i^\star\) (feasible-first).

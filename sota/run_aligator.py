@@ -8,7 +8,7 @@ Nav: native Aligator (BikeODE + IntegratorRK2 + ControlBoxFunction boxes
 
 Usage:
   python3 scripts/sota/run_aligator.py \\
-    --out experiments/results/sota_baseline/aligator.csv
+    --out aligator.csv
 """
 
 from __future__ import annotations
@@ -726,7 +726,7 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument(
         "--out",
-        default="experiments/results/sota_baseline/aligator.csv",
+        default="aligator.csv",
     )
     args = ap.parse_args()
     _require_aligator()

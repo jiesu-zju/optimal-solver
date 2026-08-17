@@ -1,7 +1,6 @@
 # PROTOCOL v1 — Feasibility-aware seed budgeting (Nav)
 
-**Status: FROZEN for Phase-1 probes.**  
-**Not** legacy χ-Bandit. **Not** `full_100` / 533×.
+**Status: FROZEN for Phase-1 probes.**
 
 ## Thesis (decision objective)
 
@@ -11,8 +10,8 @@ Kernel Gate S1/S2 (parity vs Crocoddyl/Aligator/ALTRO) establishes a **trusted h
 
 ## Known facts (do not re-litigate)
 
-1. Host: `experiments/results/sota_baseline/SUMMARY.md` — S1/S2 = 15/15.
-2. Rejected primary reward: \(r=-\log\chi\) (Nav UCB starved best-cost seed) — `foundation_probe/FINDINGS.md`.
+1. Host: Gate validation 15/15 vs Crocoddyl/Aligator/ALTRO — see `traces/sota_baseline/`.
+2. The \(r=-\log\chi\) reward starves the best-cost seed under UCB on Nav and is used only as a negative control.
 3. Batch semantics: each pull constructs a **fresh** `ConstrainedILQR` + ADMM; only the **trajectory** warm-starts. Duals / Filter do **not** persist.
 4. **Theory of ranking:** `THEORY_RANKING.md` (Prop.\ A–D). Empirics: both \(s_\chi\) and \(s_r\) flip vs oracle \(J^\star\) on equal-budget Nav arms (`PROP_BC_EMPIRICS.md`).
 
@@ -49,7 +48,8 @@ r = \mathrm{clip}\!\left(-\Delta J_{\mathrm{feas}} - \lambda\,\mathrm{viol}_+ + 
 
 **χ switch (not in \(r\)):** if after-batch \(\chi > \chi_{\mathrm{cut}}=10^{2}\) or solver throws → arm **terminated**. χ, viol, \(\rho\), \(\Delta J\) are logged and used as **BO features**.
 
-Legacy mode `CHI_LOG` (\(r=-\log\chi\)) remains in code for negative-control only; **not** for paper tables.
+The \(-\log\chi\) reward mode is available in the released binary for the
+Greedy-\(\chi\) negative control only; the primary reward is \(s_r\) above.
 
 ## Phase-1 Nav protocol
 
@@ -83,13 +83,12 @@ Phase 1 does **not** claim statistical significance. Phase 2: \(N\ge 5\) RNG rep
 ```bash
 cmake --build build --target probe_seed_budget_nav -j
 ./build/examples/probe_seed_budget_nav \
-  --out-dir experiments/results/seed_budget_protocol
+  --out-dir output/seed_budget_protocol
 ```
 
 ## Non-contributions / forbidden
 
 - Claiming kernel superiority over Croc/Aligator/ALTRO as the main result.
-- Citing `full_100` / 533× / untuned χ-UCB “wins”.
 - Tuning \(\lambda,\eta,c\) on the evaluation seed set before freezing a new PROTOCOL version.
 - Pretending duals persist across pulls.
 - MOBO/EHVI in v1 main tables.

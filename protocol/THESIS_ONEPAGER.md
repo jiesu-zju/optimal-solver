@@ -20,5 +20,4 @@ Constrained iLQR/DDP failures are catastrophic for planning/control. In embodied
 ## Non-contributions
 
 - “Our iLQR beats all public solvers on every problem.”
-- χ as the paper-primary bandit reward (empirically anti-aligned on Nav).
-- Legacy 533× / `full_100` numbers.
+- χ as the primary bandit reward (it is used only as a termination switch and BO feature).

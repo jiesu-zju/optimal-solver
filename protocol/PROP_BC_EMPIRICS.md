@@ -36,5 +36,3 @@ Reproduce: `./build/examples/probe_seed_budget_suite --bench quadruped --diag --
 - Early ranking (warm): prefers **A**
 - Oracle / late ranking: prefers **B** (\(J^\star\approx 7.98\))
 - Supports Prop.\ B/C on a contact-aware constrained iLQR host (soft step + knee barrier basins)
-
-Full notes: `experiments/results/QUADRUPED_B2_NOTES.md`.
