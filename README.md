@@ -77,3 +77,13 @@ produced by the frozen protocol in `protocol/` with the same binary interface
 shipped in `host/bin/`, RNG ids {42, 43, 44, 45, 46}, on Ubuntu 22.04 x86-64
 (AMD Ryzen 7 5800X, 32 GB RAM).  Wall-clock figures in the paper are indicative
 (machine-specific); iteration budgets and costs are exact.
+
+**RNG portability note.**  Seed generation uses `std::mt19937` with
+`std::uniform_real_distribution` / `std::normal_distribution`.  The C++
+standard fixes the `mt19937` sequence but *not* the distribution algorithms,
+so rebuilding from source with a different standard-library implementation
+(libstdc++ / libc++ / MSVC) may produce different seed trajectories and hence
+slightly different traces.  The **shipped binaries are the authoritative
+implementation** (their rebuild is bit-identical to the binary that produced
+the frozen traces); the frozen `traces/` and the verification script remain
+the reference in all cases.
