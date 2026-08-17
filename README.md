@@ -1,16 +1,16 @@
 # optimal-solver — experiment release for "Feasibility-Aware Seed Budgeting for Constrained iLQR" (RA-L submission)
 
 This repository is the **experiment release** accompanying the manuscript
-`paper/su27a.pdf`.  It contains everything needed to **verify** the paper's
-reported numbers and to **re-run** the reported experiments end-to-end, while
-the constrained-iLQR solver itself ("the host") is distributed only as
-**prebuilt binaries** (source is not part of this release).
+(currently under review; the preprint will be posted here upon acceptance).
+It contains everything needed to **verify** the paper's reported numbers and
+to **re-run** the reported experiments end-to-end, while the constrained-iLQR
+solver itself ("the host") is distributed only as **prebuilt binaries**
+(source is not part of this release).
 
 ## What is in this repository
 
 | Path | Contents |
 |------|----------|
-| `paper/` | Manuscript (PDF + LaTeX source) |
 | `protocol/` | Frozen experimental protocol and theory documents (PROTOCOL_v1, ranking-inversion theory, thesis one-pager, freeze statement) |
 | `benchmarks/` | Complete mathematical definitions of all benchmarks (B1 Nav2D–Hard, B2 planar quadruped, B3 Planar5, Gate suite) — implementable from scratch |
 | `traces/` | **All raw data behind the paper tables**: per-policy per-RNG suite CSVs, per-batch allocation traces, ranking-flip curves, quadruped diag logs, SOTA-baseline CSVs |
@@ -63,7 +63,8 @@ Aligator via Python, ALTRO via Julia); see `sota/README.md`.
 
 - Released code (verify scripts, SOTA runners, protocol/benchmark documents):
   MIT — see `LICENSE`.
-- Paper: copyright of the authors.
+- Manuscript: copyright of the authors; the preprint is posted here upon
+  acceptance (not included while under review).
 - The prebuilt host binaries in `host/bin/` are **not** open source; they are
   provided under the terms in `host/README.md` for research reproduction only.
 - Third-party software retains its own licenses — see `NOTICE.md`.

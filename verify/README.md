@@ -2,7 +2,8 @@
 
 `verify_paper_tables.py` recomputes every number printed in the manuscript
 tables from the raw artifacts under `../traces/` and compares them against
-`paper_numbers.json` (the values as published in `../paper/su27a.pdf`).
+`paper_numbers.json` (the values as printed in the manuscript; the preprint is
+posted in this repository upon acceptance).
 
 ## Usage
 
