@@ -1,0 +1,4 @@
+sequence,seed_id,requested,actual,cumulative,cost_before,cost_after,delta_j,delta_j_feas,viol,viol_plus,rho,chi,reward,feasible,converged
+0,0,10,10,10,1341.45,896.775,-444.679,-444.679,0,0,44.4679,0.00181459,50,1,0
+1,1,10,10,20,610.258,554.848,-55.41,-55.41,0,0,5.541,0.00178821,50,1,0
+2,2,10,10,30,545.803,539.515,-6.28805,-6.28805,0,0,0.628805,0.135161,6.35093,1,0

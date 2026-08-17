@@ -1,0 +1,11 @@
+# Re-run outputs (never commit)
+output/
+raw/
+
+# Python
+__pycache__/
+*.pyc
+
+# OS / editor
+.DS_Store
+*.swp

@@ -1,0 +1,16 @@
+solver,problem,seed,converged,feasible,termination_reason,final_cost,eq_violation,ineq_violation,dynamics_violation,iterations,time_ms,chi
+altro,pendulum_swingup,0,1,1,CONVERGED,186.10759695267993,0.0,0.0,0.0,4,75914.567061,0.0
+altro,double_integrator_reach,0,1,1,CONVERGED,6.665675609597028,0.0,0.0,0.0,2,13749.660339,0.0
+altro,cartpole_stabilize,0,1,1,CONVERGED,35.03141934969885,0.0,0.0,0.0,3,24742.845657,0.0
+altro,quadrotor_hover,0,1,1,CONVERGED,4478.511227917678,0.0,3.744644866430424e-5,0.0,85,22056.477948,0.0
+altro,nav_2d_bicycle,0,1,1,CONVERGED,538.8630133683178,0.0,9.389003574655774e-5,0.0,42,31801.809926,0.0
+altro,pendulum_swingup,1,1,1,CONVERGED,186.10759695267993,0.0,0.0,0.0,4,0.865874,0.0
+altro,double_integrator_reach,1,1,1,CONVERGED,6.665675609597028,0.0,0.0,0.0,2,0.505634,0.0
+altro,cartpole_stabilize,1,1,1,CONVERGED,113.85446054327372,0.0,0.0,0.0,4,2.496299,0.0
+altro,quadrotor_hover,1,1,1,CONVERGED,5441.457628446072,0.0,9.097217197329144e-5,0.0,80,31.302405,0.0
+altro,nav_2d_bicycle,1,1,1,CONVERGED,538.8630133665861,0.0,9.389010506133388e-5,0.0,35,39.130294,0.0
+altro,pendulum_swingup,2,1,1,CONVERGED,186.10759695267993,0.0,0.0,0.0,4,1.074916,0.0
+altro,double_integrator_reach,2,1,1,CONVERGED,6.665675609597028,0.0,0.0,0.0,2,0.542327,0.0
+altro,cartpole_stabilize,2,1,1,CONVERGED,77.04288968920633,0.0,0.0,0.0,4,1.675086,0.0
+altro,quadrotor_hover,2,1,1,CONVERGED,4360.4714483268035,0.0,8.973909596932117e-5,0.0,66,25.408617,0.0
+altro,nav_2d_bicycle,2,1,1,CONVERGED,538.8630463789507,0.0,9.247363402309361e-5,0.0,31,29.127391,0.0

@@ -1,0 +1,6 @@
+bench,policy,n_seeds,cost_mean,cost_std,feas_rate,viol_mean,budget_ok
+quadruped,Uniform,5,10.4731,0.468014,1.0000,0,1
+quadruped,UCB,5,10.298,0.804086,1.0000,0,1
+quadruped,BO-EI,5,10.298,0.804086,1.0000,0,1
+quadruped,Greedy-s_r,5,10.298,0.804086,1.0000,0,1
+quadruped,Greedy-χ,5,11.128,0.607524,1.0000,0,1

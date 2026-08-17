@@ -1,0 +1,6 @@
+bench,policy,n_seeds,cost_mean,cost_std,feas_rate,viol_mean,budget_ok
+planar5,Uniform,5,433.921,89.9444,1.0000,0.000303127,1
+planar5,UCB,5,277.043,138.364,1.0000,0,1
+planar5,BO-EI,5,269.703,143.421,1.0000,0,1
+planar5,Greedy-s_r,5,269.703,143.421,1.0000,0,1
+planar5,Greedy-χ,5,402.427,50.5193,1.0000,0.000134161,1

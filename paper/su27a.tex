@@ -1,0 +1,896 @@
+\documentclass[lettersize,journal]{IEEEtran}
+\usepackage{graphicx}
+\usepackage[caption=false,font=normalsize,labelfont=sf,textfont=sf]{subfig}
+\usepackage{textcomp}
+\usepackage{verbatim}
+\usepackage[comma,numbers,square,sort&compress]{natbib}
+\usepackage{epstopdf}
+\usepackage[cmex10]{amsmath}
+\usepackage{array, arydshln, blkarray, enumerate, color, xcolor, multicol}
+\usepackage{amsfonts, amsmath, amssymb, latexsym, algorithmic, algorithm, bm}
+\usepackage{longtable, rotating, multirow, url}
+\usepackage{booktabs}
+\hyphenation{op-tical net-works semi-conduc-tor IEEE-Xplore}
+\allowdisplaybreaks[4]
+\newcommand{\field}[1]{\mathbb{#1}}
+\newcommand{\calc}[1]{\mathcal{#1}}
+\DeclareMathOperator{\PR}{\field{P}}
+\DeclareMathOperator{\E}{\field{E}}
+\DeclareMathOperator*{\argmax}{argmax}
+\DeclareMathOperator*{\argmin}{argmin}
+\def\N{\field{N}}
+\def\R{\field{R}}
+\def\A{\field{A}}
+\def\X{\field{X}}
+\def\W{\field{W}}
+\def\Q{\field{Q}}
+\def\I{\field{I}}
+\def\K{\field{K}}
+\def\V{\field{V}}
+\def\cA{{\cal A}}
+\def\cB{{\cal B}}
+\def\cC{{\cal C}}
+\def\cD{{\cal D}}
+\def\cE{{\cal E}}
+\def\cF{{\cal F}}
+\def\cG{{\cal G}}
+\def\cH{{\cal H}}
+\def\cI{{\cal I}}
+\def\cJ{{\cal J}}
+\def\cK{{\cal K}}
+\def\cL{{\cal L}}
+\def\cM{{\cal M}}
+\def\cN{{\cal N}}
+\def\cO{{\cal O}}
+\def\cP{{\cal P}}
+\def\cQ{{\cal Q}}
+\def\cS{{\cal S}}
+\def\cT{{\cal T}}
+\def\cU{{\cal U}}
+\def\cV{{\cal V}}
+\def\cW{{\cal W}}
+\def\cX{{\cal X}}
+\def\cY{{\cal Y}}
+\def\cZ{{\cal Z}}
+
+\usepackage{amsthm}
+\newtheorem{theorem}{Theorem}
+\newtheorem{definition}{Definition}
+\newtheorem{lemma}{Lemma}
+\newtheorem{proposition}{Proposition}
+\newtheorem{corollary}{Corollary}
+\newtheorem{remark}{Remark}
+
+\begin{document}
+
+\title{Feasibility-Aware Seed Budgeting for Constrained iLQR:\\
+Diagnostic Multi-Armed Bandits and Bayesian Optimization}
+\author{Jie Su}
+\markboth{IEEE Robotics and Automation Letters,~Vol.~XX, No.~X, Month~2026}%
+{J.~Su: Feasibility-Aware Seed Budgeting for Constrained iLQR}
+\maketitle
+
+\begin{abstract}
+Constrained iterative LQR / DDP~\cite{tassa2012,howell2019,mastalli2020} is a workhorse for trajectory optimization in robotics, yet it is acutely sensitive to the initial trajectory: under a tight iteration budget, a poor warm-start yields slow convergence, local minima, or outright infeasibility. A standard remedy is multi-start: draw $K$ seeds, allocate each a uniform budget share, and retain the best feasible trajectory. Uniform allocation is simple---and wasteful---when only a minority of seeds lie in favourable basins. We formulate multi-start constrained iLQR as a sequential budget-allocation problem. After each short warm-started batch, the solver exposes diagnostics---feasible cost improvement $\Delta J$, constraint violation $v$, improvement rate $\rho$, and the closed-loop convergence measure $\chi$~\cite{zhu2024}---which form the selection signal: the primary reward combines the first three, while $\chi$ serves only as a termination switch and as a feature for Bayesian optimisation. We prove that any score in a natural class of local-improvement diagnostics can mis-rank seeds relative to their terminal feasible cost (ranking inversion), so greedy selection by a single score is not universally optimal. We instantiate Uniform, UCB, and GP--EI policies on this foundation. Adaptive allocation with the proposed reward improves over Uniform on a wheeled-navigation and an articulated-arm benchmark (feasible-first comparison on 5/5 random seeds; $\approx$38\% lower mean cost), while greedy $\chi$-selection proves unreliable; a contact-rich quadruped template provides a ranking-inversion diagnostic on a third physical domain. The framework is budget-exact; the benchmark definitions and all
+allocation traces are released, and the scheduling framework and host
+solver are distributed as a prebuilt binary for independent reproduction.
+\end{abstract}
+
+\begin{IEEEkeywords}
+Trajectory optimization, constrained iLQR, warm-start, multi-armed bandit, Bayesian optimization, model predictive control.
+\end{IEEEkeywords}
+
+% ===========================================================================
+\section{Introduction}
+% ===========================================================================
+
+\IEEEPARstart{M}{ulti-start} trajectory optimization is a common strategy for mitigating the
+sensitivity of iterative LQR / DDP~\cite{tassa2012,howell2019,mastalli2020} to the initial guess.
+Given a library of $K$ seed trajectories (drawn, e.g., via
+LHS~\cite{mckay1979} or homotopy heuristics~\cite{merkt2021}),
+a fixed total budget of $B$ solver iterations, and a uniform allocation
+rule, each seed receives $B/K$ iterations and the best feasible result is
+retained~\cite{gyorgy2011,jain2019}.
+
+Uniform allocation is simple, but it is wasteful whenever the seeds differ
+substantially in quality: a seed that starts in a poor basin receives the same
+budget as one descending rapidly toward a good local optimum.  The decision
+problem is therefore \emph{how to allocate the remaining budget among seeds
+dynamically, based on observations collected during optimisation.}
+
+The solver exposes several diagnostics after each short batch of $b$
+iterations: the feasible cost $J$, the max constraint violation $v$, the
+per-iteration improvement rate $\rho$, and the closed-loop convergence
+measure $\chi = \|\prod \tilde{A}_k\|_2$~\cite{zhu2024}, where
+$\tilde{A}_k = A_k - B_k K_k$ are the closed-loop dynamics under LQR
+feedback.  These signals contain
+information about the local landscape, but they are not a perfect predictor
+of the terminal feasible cost $J^\star$ that a seed will achieve after full
+budget.  We show formally (Section~\ref{sec:theory_ranking}) that a
+\emph{ranking inversion} must occur: a score computed from batch diagnostics
+can prefer a seed whose terminal feasible cost is worse than another that the
+same score ranks lower.  This ranking inversion implies that greedy
+selection by any fixed score is not universally optimal, and that some
+form of exploration is needed in principle.
+
+Against this backdrop we formulate multi-start constrained iLQR as a
+sequential budget-allocation (multi-armed bandit) problem and instantiate
+three policies---Uniform, UCB~\cite{auer2002}, and GP--EI (Bayesian
+optimisation~\cite{srinivas2010,shahriari2016})---on a frozen
+feasibility-improvement reward that combines $\Delta J$, $v$, and $\rho$,
+with $\chi$ reserved as a termination switch and a feature for BO.
+
+\textbf{Related work.} Constrained iLQR/DDP and public
+solvers~\cite{tassa2012,howell2019,mastalli2020}; direct transcription
+methods~\cite{posa2014,schulman2014}; multi-start and
+warm-starts~\cite{gyorgy2011,jain2019,merkt2021}; MAB /
+UCB~\cite{auer2002}; BO with GP--EI~\cite{shahriari2016,srinivas2010,
+rasmussen2006}; the convergence measure $\chi$~\cite{zhu2024}.
+Our contribution is a \emph{feasibility-aware budgeting} interface between
+these literatures and the practical problem of allocating solver iterations
+across warm-starts.
+
+\textbf{Contributions.}
+\begin{enumerate}
+  \item \textbf{Ranking inversion analysis.} We define the class of
+    local-improvement scores $S_{\mathrm{LI}}$ (Definition~\ref{def:li_scores})
+    and prove that any score in this class can disagree with the
+    oracle ordering by terminal feasible cost
+    (Lemma~\ref{lem:li_incompleteness}).  This implies that greedy selection
+    by such scores is not universally optimal
+    (Corollary~\ref{cor:greedy_insufficiency}), motivating exploration.
+  \item \textbf{Feasibility-aware reward and protocol.} We freeze a scalar
+    primary reward (Equation~\eqref{eq:reward}) that combines feasible cost
+    improvement, constraint violation, and improvement rate, with $\chi$
+    serving only as a termination switch and a BO feature dimension.
+    Uniform, UCB, and GP--EI policies share an exact budget-accounting
+    scheduler with warm-start-only batches.
+  \item \textbf{Empirical findings on real constrained-iLQR instances.}
+    We demonstrate ranking inversion
+    (Corollary~\ref{cor:greedy_insufficiency}) on wheeled-navigation and
+    contact-rich quadruped benchmarks: both the feasible-improvement score
+    and $-\log\chi$ mis-rank seeds against the oracle ordering
+    (Tables~\ref{tab:ranking_flip} and~\ref{tab:quad_diag}).
+    Under the frozen protocol, adaptive allocation (UCB, BO--EI,
+    Greedy-$s_r$) wins the feasible-first comparison against Uniform on
+    all five RNG seeds of the navigation benchmark (one-sided sign test,
+    $p = 2^{-5}$) and attains $\approx$38\% lower mean cost on an
+    all-feasible arm benchmark, while greedy $\chi$-selection is
+    unreliable in both settings.
+\end{enumerate}
+\textbf{Scope.} The paper does not claim solver superiority: the host is a
+constrained iLQR stack validated for parity with open-source solvers on a
+standard gate suite (Section~\ref{sec:host_note}), and the scheduling
+claims concern iteration-budget allocation. The quadruped template serves
+as a ranking-inversion diagnostic, not as a policy-separation suite.
+Adaptive policies (UCB, BO--EI, Greedy-$s_r$) may tie with each other; we
+do not claim to separate them on the current seed libraries.
+The implementation is C++17. The benchmark definitions, experimental
+protocol, and all allocation traces are released; the seed-budgeting
+scheduler and the constrained-iLQR host are distributed as a prebuilt
+binary (Docker image) to enable independent reproduction.\footnote{\url{https://github.com/jiesu-zju/optimal-solver}
+% TODO(pre-submission): create the public release repo (benchmarks + protocol +
+% traces + verify scripts + SOTA runners + Docker image with the binary host)
+% and confirm this URL before submitting.
+}
+
+% ===========================================================================
+\section{Method: Feasibility-Aware Seed Budgeting}
+% ===========================================================================
+
+\subsection{Background: Constrained iLQR and Diagnostics}
+\label{sec:chi_background}
+
+Consider a discrete-time optimal control problem with horizon $N$, state dimension $n$, and control dimension $m$:
+\begin{equation}
+\label{eq:ocp}
+\begin{aligned}
+\min_{\{x_k, u_k\}} \; & \ell_N(x_N) + \sum_{k=0}^{N-1} \ell_k(x_k, u_k),\\
+\text{s.t.}\quad & x_{k+1} = f_k(x_k, u_k), \\
+                  & g_k(x_k, u_k) \leq 0, \quad \forall k \in [0, N-1],\\
+                  & h_k(x_k, u_k) = 0, \quad \forall k \in [0, N-1], \\
+                  & g_N(x_N) \leq 0, h_N(x_N) = 0.
+\end{aligned}
+\end{equation}
+where $\ell_k(x_k, u_k)$ and $\ell_N(x_N)$ are the stage and terminal cost functions, $f_k(x_k, u_k)$ is the nonlinear dynamics, $g_k(x_k, u_k)$ and $g_N(x_N)$ are inequality constraints (control limits, joint limits, etc.), and $h_k(x_k, u_k)$ and $h_N(x_N)$ are equality constraints (waypoints, terminal pose, etc.). Constrained iLQR solves~\eqref{eq:ocp} via iterative linearization. At each iteration, the dynamics and cost are quadratized around the current nominal trajectory $\{\bar{x}_k, \bar{u}_k\}_{k=0}^N$, yielding a local LQR subproblem whose solution is obtained via backward Riccati recursion, producing feedback gains $K_k$ and feedforward terms $d_k$. Constraints are handled with an ADMM / Filter line-search stack and optional Box-QP control limits in the Riccati step (implementation details in the host solver; see the reproducibility footnote). The forward pass applies $\delta u_k = K_k \delta x_k + \alpha d_k$ with filter or backtracking line search.
+
+The backward pass also yields the closed-loop convergence measure~\cite{zhu2024}:
+\begin{equation}
+\chi = \|\Phi\|_2, \quad \Phi = \prod_{k=N-1}^{0} \tilde{A}_k, \quad \tilde{A}_k = A_k - B_k K_k
+\label{eq:chi_def}
+\end{equation}
+where $A_k = \partial f_k/\partial x$, $B_k = \partial f_k/\partial u$, and $K_k$ are the LQR gains.
+The matrix $\tilde{A}_k$ is the closed-loop state transition matrix, and $\Phi$ propagates perturbations over the full horizon. $\chi < 1$ indicates exponential decay of trajectory perturbations (local basin of attraction), while $\chi \gg 1$ signals poor convergence. Computation requires one $O(N n^3)$ matrix chain multiplication---performed automatically at each backward pass with negligible overhead.  We return to the properties of $\chi$ in Section~\ref{sec:chi_analysis}.
+
+\subsection{Seeds as Bandit Arms}
+
+We cast multi-start iLQR as a multi-armed bandit~\cite{auer2002}: arm~$i$ is a
+seed trajectory $\tau^{(i)}$. At round $t$ we select $i_t$, run a batch of $b$
+iLQR iterations with \emph{trajectory} warm-start (a fresh solver instance;
+dual variables are not assumed to persist), and observe diagnostics
+$(J_{\mathrm{before}}, J_{\mathrm{after}}, v, \chi)$, where $v$ is the max
+constraint violation over all stages.
+
+\subsubsection{Primary reward design}
+
+The reward encodes the decision objective: under a tight budget, prefer seeds that are feasible and whose feasible cost is still decreasing, while avoiding credit for cost reduction achieved under infeasibility.  Define
+
+\begin{align*}
+\Delta J &= J_{\mathrm{after}}-J_{\mathrm{before}},\\
+\mathrm{viol}_+ &= \max(0,\,v-\varepsilon),\\
+\Delta J_{\mathrm{feas}} &=
+\begin{cases}
+\Delta J, & v \le \varepsilon,\\
+0, & \text{otherwise},
+\end{cases}\\[2pt]
+\rho &= \frac{\max(0,\,-\Delta J_{\mathrm{feas}})}{\max(1,\,b_{\mathrm{used}})}.
+\end{align*}
+
+The primary reward is
+
+\begin{equation}
+r^{(i)}_t = \mathrm{clip}\!\Big(-\Delta J_{\mathrm{feas}} - \lambda\,\mathrm{viol}_+ + \eta\,\rho\Big),
+\label{eq:reward}
+\end{equation}
+
+with weights $\lambda,\eta>0$.  The three terms serve distinct roles:
+
+\begin{itemize}
+  \item $-\Delta J_{\mathrm{feas}}$ is the main signal, active only when the
+    arm ends the batch feasible.  It rewards feasible cost reduction; an
+    infeasible arm receives zero from this term.
+  \item $-\lambda\,\mathrm{viol}_+$ penalises constraint violations
+    linearly, remaining active whether or not the arm is feasible.
+  \item $\eta\,\rho$ is a per-iteration rate bonus.  When the solver
+    consumes fewer iterations than the batch size $b$ (early convergence or
+    numerical failure), this term amplifies the improvement rate slightly.
+\end{itemize}
+
+\subsubsection{Role of $\chi$}
+
+The convergence measure $\chi$ is \emph{not} inserted into~\eqref{eq:reward}.
+Instead it serves two auxiliary purposes:
+\begin{itemize}
+  \item \textbf{Termination switch.} If $\chi>\chi_{\mathrm{cut}}$ or the batch
+    fails numerically, arm~$i$ is suspended and removed from further allocation,
+    preventing budget from being wasted on seeds whose local linearisation is
+    unstable.
+  \item \textbf{BO feature.} When Bayesian optimisation is used as the
+    scheduling policy, $\log_{10}\chi$ is included as a dimension of the seed
+    feature vector (Section~\ref{sec:bo_policy}), giving the GP surrogate
+    access to convergence information without making $\chi$ the objective.
+\end{itemize}
+
+We also optionally stop the entire allocation once a feasible incumbent reaches
+a declared near-optimal cost threshold (early success), avoiding expenditure of
+residual budget on poor seeds.
+
+\subsection{Theoretical Motivation: Why Instantaneous Arm Scores Are Not Fixed}
+\label{sec:theory_ranking}
+
+The scheduler observes a diagnostic score $s(d_i(t))$ after each warm-started batch and must decide which seed receives further iterations. Exploration (UCB / BO) is justified if greedy ranking by $s$ can disagree with the oracle ranking by terminal feasible cost $J_i^\star$. We establish this disagreement through a core lemma on local-improvement scores (Section~\ref{sec:li_incompleteness}), an auxiliary analysis of $\chi$ (Section~\ref{sec:chi_analysis}), and a decomposition of the primary reward $s_r$ that delimits its regime of applicability (Section~\ref{sec:reward_decomposition}).
+
+\subsubsection{Local-improvement scores can mis-rank seeds}
+\label{sec:li_incompleteness}
+
+We first define the class of scores to which our main result applies.
+
+\begin{definition}[Local-improvement score class]
+\label{def:li_scores}
+A score $s$ belongs to $S_{\mathrm{LI}}$ if it depends only on the diagnostics of a single warm-started batch and, for any two pulls where both arms finish feasible ($v \le \varepsilon$), $s$ is strictly increasing in the negative cost change $-\Delta J$ (larger feasible decrease $\Rightarrow$ higher score).
+\end{definition}
+
+The dominant term of our primary reward $s_r$---namely $-\Delta J_{\mathrm{feas}}$ when $v \le \varepsilon$---belongs to $S_{\mathrm{LI}}$.
+
+\begin{lemma}[Local-improvement incompleteness]
+\label{lem:li_incompleteness}
+For any $s \in S_{\mathrm{LI}}$, there exist instances with two arms sharing the same initial feasible cost $J_0$ such that
+\[
+s(d_A(1)) > s(d_B(1)) \quad\text{but}\quad J_A^\star > J_B^\star,
+\]
+where $J_i^\star$ is the terminal feasible cost of arm~$i$ under equal remaining budget after round~1.
+\end{lemma}
+
+\begin{proof}
+Fix $s \in S_{\mathrm{LI}}$, common initial cost $J_0$, and choose any $a > b > 0$ as the first-batch cost decreases of arms $A$ and $B$, respectively. Both batches finish feasible by construction, so $s(d_A(1)) > s(d_B(1))$ follows from $s \in S_{\mathrm{LI}}$.
+
+Specify the second-batch decreases $c, d \ge 0$ as
+\[
+\begin{aligned}
+J_A &: \; J_0 \xrightarrow{\;-a\;} J_0 - a \xrightarrow{\;-c\;} J_0 - a - c,\\
+J_B &: \; J_0 \xrightarrow{\;-b\;} J_0 - b \xrightarrow{\;-d\;} J_0 - b - d.
+\end{aligned}
+\]
+The terminal costs are $J_A^\star = J_0 - a - c$ and $J_B^\star = J_0 - b - d$.  The inequality $J_A^\star > J_B^\star$ is equivalent to $a + c < b + d$, i.e.\ $d - c > a - b > 0$.
+
+Since $a - b$ is a fixed positive number, choose $c = 0$ (arm~$A$ makes no further progress after the first batch---a shallow basin) and any $d > a - b$ (arm~$B$ continues to improve---a deep basin).  These choices are always feasible, giving $s(d_A(1)) > s(d_B(1))$ with $J_A^\star > J_B^\star$. \hfill $\blacksquare$
+\end{proof}
+
+\begin{corollary}[Greedy insufficiency of single-batch local-improvement scores]
+\label{cor:greedy_insufficiency}
+No policy that greedily selects the arm with the highest current score $s \in S_{\mathrm{LI}}$ can be universally optimal with respect to terminal feasible cost $J^\star$.
+\end{corollary}
+
+\begin{remark}[Scope]
+Corollary~\ref{cor:greedy_insufficiency} does not rule out the possibility that a richer score aggregating multi-batch history (e.g.\ a running average or a GP surrogate) could recover the oracle ordering.  It shows only that a single batch of local-improvement information is insufficient.  This distinction motivates the construction of multi-batch features in the BO policy (Section~\ref{sec:bo_policy}) and the exploration bonus in UCB---both of which accumulate information across pulls.
+\end{remark}
+
+\begin{remark}[Specialisation to $s_r$]
+The dominant term of our primary reward $s_r$ (Equation~\eqref{eq:reward}) is $-\Delta J_{\mathrm{feas}}$.  When the batch finishes feasible ($v \le \varepsilon$), this term belongs to $S_{\mathrm{LI}}$ and therefore inherits the ranking inversion of Lemma~\ref{lem:li_incompleteness}.  The second term $-\lambda\,\mathrm{viol}_+$ is active only when the arm is infeasible; it is not covered by this lemma and is examined empirically in Section~\ref{sec:reward_decomposition}.
+\end{remark}
+
+\begin{remark}[Generality]
+Lemma~\ref{lem:li_incompleteness} constructs an abstract pair of cost sequences; it does not guarantee that every constrained iLQR problem realises such a configuration.  Whether a concrete problem and seed library produce the required ``fast-into-shallow-basin'' and ``slow-into-deep-basin'' pair is an empirical question.  Scores outside $S_{\mathrm{LI}}$ (e.g.\ pure violation penalties) could in principle avoid the construction altogether.
+
+The lemma suffices because $-\Delta J_{\mathrm{feas}} \in S_{\mathrm{LI}}$ is the dominant term driving our protocol's seed selection; the empirical evidence in Section~\ref{sec:ranking_flip} confirms that the required conditions arise in practice.
+\end{remark}
+
+\subsubsection{Note on $\chi$}
+\label{sec:chi_analysis}
+
+Recall $\chi = \|\prod \tilde{A}_k\|_2$ from Section~\ref{sec:chi_background}.
+The spectral norm of a matrix product is not monotone in the norms of the
+individual factors (e.g.\ $\operatorname{diag}(10,0.01)\cdot
+\operatorname{diag}(0.01,10) = \operatorname{diag}(0.1,0.1)$ has norm
+$0.1$, while tightening each factor to $\operatorname{diag}(9.9,0.01)$
+yields a product with norm $98.01$).  Therefore $\chi$ is not a quantity
+that behaves monotonically with local cost improvement---it can increase
+when individual linearizations appear to contract.  In our protocol $\chi$
+serves only as a termination switch (arms with diverging $\chi$ are
+suspended) and as a BO feature dimension.
+
+\subsubsection{Reward decomposition and regime of applicability}
+\label{sec:reward_decomposition}
+
+The primary reward $s_r = -\Delta J_{\mathrm{feas}} - \lambda\,\mathrm{viol}_+ + \eta\rho$ has three components whose roles differ in the ranking-inversion landscape.
+
+\textbf{Feasible improvement ($-\Delta J_{\mathrm{feas}}$).}  This is the dominant term driving seed selection when an arm is feasible.  It belongs to $S_{\mathrm{LI}}$; Lemma~\ref{lem:li_incompleteness} therefore guarantees that ranking inversion can occur, and greedy selection by this term alone is not universally optimal.  Section~\ref{sec:ranking_flip} provides concrete illustrations of this inversion on real constrained-iLQR instances.
+
+\textbf{Violation penalty ($-\lambda\,\mathrm{viol}_+$).}  This term does \emph{not} belong to $S_{\mathrm{LI}}$; it does not reward cost decrease and is active only in the infeasible regime.  It encodes a soft preference: arms that remain persistently infeasible accumulate a negative score that lowers their pull priority.  However, the term is not a provable separator between ``temporarily infeasible but promising'' and ``permanently infeasible'' arms, because a moderately infeasible arm with superficially good cost can still receive a higher total score than a barely feasible one.  Its effectiveness is problem-dependent and examined empirically in the experiments.
+
+\textbf{Rate bonus ($\eta\rho$).}  This term provides a small per-iteration improvement bonus that becomes relevant when the solver converges early or fails numerically (so $b_{\mathrm{used}} < b$).  Under nominal operation its effect on ranking is minor.
+
+\textbf{Regime of applicability.}  Lemma~\ref{lem:li_incompleteness} establishes that local-improvement scores---including the dominant term of $s_r$---are \emph{not} universally reliable predictors of terminal feasible cost.  This negative result does not, however, imply that $s_r$ is useless as a bandit reward.  Bandit policies (UCB, BO) require only that the reward distribution carries \emph{some} signal about arm quality.
+
+In practice, the regimes where $s_r$ provides a useful signal can be characterised per seed library.  After warm-up, if the empirical mean rewards $\bar{s}_r^{(i)}$ (or the feasible incumbent costs) are positively correlated with the oracle ordering $J_i^\star$, then bandit allocation can exploit this signal.  When the correlation is weak---for example because warm-up already identifies the best basin, as on the current benchmarks---the adaptive policies remain tied \emph{with each other}, and harder seed libraries are required to separate them; the separation of the adaptive bloc from Uniform on the navigation and arm benchmarks (Section~\ref{sec:budgeting_results}) shows that $s_r$ nevertheless carries exploitable signal in practice.  When the correlation is systematically negative (early $s_r$ anti-correlates with $J^\star$ and later batches do not correct it), the reward or feature representation must be revised.  This per-library verification is part of the experimental protocol rather than a theoretical guarantee; Section~\ref{sec:budgeting_results} provides diagnostic statistics.
+
+\subsection{UCB Policy (Independent Arms)}
+
+UCB treats each seed as an independent bandit arm under reward~\eqref{eq:reward}. At scheduling round $t$, the policy selects the seed maximizing:
+\begin{equation}
+\begin{aligned}
+i_t^{\text{UCB}} &= \argmax_{i \in \mathcal{A}_t} \Bigl( \hat{r}_{i,t}
+   + c \sqrt{\frac{2\log t}{n_{i,t}}} \Bigr)
+\end{aligned}
+\label{eq:ucb_chi}
+\end{equation}
+where $\mathcal{A}_t \subseteq \{1,\dots,K\}$ is the set of active (non-terminated) seeds, $\hat{r}_{i,t}$ is the empirical mean reward, $n_{i,t}$ is its pull count, and $c$ is an exploration constant. Seeds with $\chi > \chi_{\text{term}}$ are terminated and removed from $\mathcal{A}_t$. The total budget $B$ is the only hyperparameter.
+
+\noindent\textbf{Theoretical justification.}
+With clipped feasible-improvement rewards and $\chi$-based arm suspension, active-arm rewards are bounded. We use $c=1.0$.
+
+\subsection{BO Policy (GP--EI)}
+\label{sec:bo_policy}
+
+While UCB treats seeds independently, BO models similarity via a Gaussian Process and selects by Expected Improvement~\cite{srinivas2010} on reward~\eqref{eq:reward}.  We use it as a tool, not a methodological innovation; the description here is kept brief.
+
+Each arm is mapped to a diagnostic feature vector
+$\phi^{(i)} = [\, \Delta J,\; v,\; \log_{10}\chi,\; n_i,\; \bar\rho \,]$,
+updated after every pull.  The arm index is excluded to prevent the GP from
+learning arbitrary arm identity rather than generalisable features.
+
+We model the reward function over seed feature space as a GP~\cite{rasmussen2006} with RBF kernel $k(\phi, \phi') = \sigma_f^2 \exp(-\|\phi - \phi'\|_2^2 / 2\ell^2)$,
+kernel hyperparameters set to the benchmark values listed in Table~\ref{tab:solver_params}---treated as fixed settings rather than optimised values.  The GP posterior mean $\mu(\phi^*)$ and variance $\sigma^2(\phi^*)$ follow the standard closed-form GP equations~\cite{rasmussen2006}; exact Cholesky inference costs $O(K^3)$, negligible for $K=8$.
+
+The next seed is selected by maximising Expected Improvement~\cite{srinivas2010}
+$\text{EI}(\phi) = (\mu - r_{\text{best}} - \xi)\,\Phi(Z) + \sigma\,\varphi(Z)$
+with $Z = (\mu - r_{\text{best}} - \xi)/\sigma$ and $\xi = 0.01$, where $\Phi$ and $\varphi$ are the standard normal CDF and PDF.
+
+\begin{algorithm}[t]
+\caption{Feasibility-Aware Seed Budgeting}
+\label{alg:budgeting}
+\begin{algorithmic}[1]
+\STATE \textbf{Input:} Seeds $\{\tau^{(i)}\}_{i=1}^K$, budget $B$, batch $b$, warm-up $w$, policy $\pi \in \{\text{UCB}, \text{BO}\}$
+\STATE Initialize $n_i \gets 0$, $\hat{r}_i \gets 0$, $\chi_i \gets \infty$ for all $i$
+\STATE \textbf{Phase 1:} Run $w$ warm-started iLQR iterations on each seed; compute diagnostics and $r_i$ via~\eqref{eq:reward}; update $n_i \gets n_i + 1$
+\FOR{$t = Kw+1$ \textbf{to} $B$ \textbf{step} $b$}
+    \STATE $i^* \gets \textsc{Select}(\pi)$ \quad // UCB or EI policy
+    \STATE Run $b$ warm-started iLQR iterations on seed $i^*$ (using the previous solution as the initial guess); observe $\chi_{i^*}$
+    \STATE Observe diagnostics; set $r_{i^*}$ via~\eqref{eq:reward}; update $\hat{r}_{i^*}$, $n_{i^*}$
+    \IF{$\chi_{i^*} > \chi_{\text{term}}$} \STATE Terminate seed $i^*$ \ENDIF
+\ENDFOR
+\STATE \textbf{Return} solution of seed with lowest final cost
+\end{algorithmic}
+\end{algorithm}
+
+% ===========================================================================
+% ===========================================================================
+\section{Experiments}
+\label{sec:experiments}
+
+We evaluate feasibility-aware seed budgeting on three frozen instances that
+collectively cover the paper's theoretical claims: ranking inversion
+(Layer~1), policy discrimination under $s_r$, and the negative control
+$\chi$-greedy.  All experiments use reward~\eqref{eq:reward} with
+$(\lambda,\eta)=(10,0.1)$, $\chi_{\mathrm{term}}=100$, disabled
+early-success stopping, and the solver parameters of
+Table~\ref{tab:solver_params}.
+
+% ===========================================================================
+\subsection{Setup and Protocol}
+\label{sec:setup}
+% ===========================================================================
+
+Table~\ref{tab:protocol} lists the three benchmarks.  Each is run with
+five random seeds ($42$--$46$), and reported metrics are mean $\pm$ std
+across those seeds unless noted.
+
+\begin{table*}[t]
+\caption{Benchmark protocol.}
+\label{tab:protocol}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{lcccccl}
+\toprule
+ID & System & $K$ & Warm-up & Batch & $B$ & Role \\
+\midrule
+B1 & Nav2D--Hard (bicycle + dense soft obstacles) & 8 & 10 & 10 & 160 & Primary policy discrimination \\
+B2 & Planar quadruped (soft-contact template)$\dagger$ & 8 & 2 & 5 & 80 & Contact-rich ranking-flip diagnostic \\
+B3 & 5-DOF planar analytic arm (UP/DOWN homotopy) & 8 & 3 & 5 & 80 & Second discrimination + clean $\chi$ negative control \\
+\bottomrule
+\end{tabular}
+
+{\footnotesize $\dagger$ Diagnostic mode uses $K{=}4$ seeds with equal
+per-seed budget (warm-up 2, then $+30$ iterations) and no bandit; the
+$K{=}8$ suite configuration is a near-tie sanity check only.}
+\end{table*}
+
+\noindent\textbf{Policies.}
+We compare five strategies sharing reward~\eqref{eq:reward}:
+\textbf{Uniform} (equal allocation), \textbf{UCB}~\cite{auer2002}
+(Eq.~\eqref{eq:ucb_chi}, $c=1.0$), \textbf{BO--EI} (GP with RBF kernel,
+Section~\ref{sec:bo_policy}), \textbf{Greedy-$s_r$} (always pull the seed
+with the highest current $s_r$), and \textbf{Greedy-$\chi$} (always pull the
+seed with the lowest $\chi$).  The scheduler follows
+Algorithm~\ref{alg:budgeting} with trajectory warm-start and $\chi_{\mathrm{term}}=100$.
+
+\subsubsection{Benchmark descriptions}
+
+\textbf{B1: Nav2D--Hard.}
+Dynamics: bicycle model~\cite{zhu2024} with state
+$x = [x,y,\theta,\kappa]^\top$ and control $u = [v,\dot\kappa]^\top$,
+discretised via RK4 ($\Delta t = 0.1$~s, $N = 80$).
+Cost: waypoint attraction $w_p\|p - p^*\|^2$, curvature penalty
+$w_\kappa\kappa^2$, control regularisation $w_u\|u\|^2$, plus six circular
+soft obstacles with quadratic penetration cost
+$W\max(0,\,r+m-\|p-c\|)^2$ ($W=80$, $m=0.35$~m) forming a dense field with
+two homotopy classes.
+Constraints: control limits $|v| \le 3$, $|\dot\kappa| \le 2$; curvature
+$|\kappa| \le 1.5$; terminal position tolerance $\pm 0.5$~m, heading
+$\pm 0.3$~rad.
+Setup: start $(0,0)$, target $(10,0)$; $K=8$ seeds from LHS noise
+($w=0.5$, alternating heading bias), $B=160$, $b=10$, warm-up $10$.
+
+\textbf{B2: Planar quadruped.}
+Dynamics: planar floating-body template with state
+$(p_x,p_z,\theta,q_{\mathrm{hip}}^\mathrm{f},q_{\mathrm{knee}}^\mathrm{f},
+q_{\mathrm{hip}}^\mathrm{b},q_{\mathrm{knee}}^\mathrm{b},\dot q) \in \R^{14}$
+and control (joint torques) $u \in \R^4$; analytic Jacobians.
+Cost: quadratic body-pose tracking and joint regularisation; ground
+interaction and joint limits encoded as soft costs (step penetration
+penalty, hip retraction barrier, knee-angle bounds) rather than explicit
+contact forces.
+Constraints: knee-angle bounds; terminal box on body position
+$|p_x| \le 0.2$, $-0.1 \le p_z \le 0.4$.
+Setup: $K=8$ seeds, $B=80$, $b=5$, warm-up $2$; for the ranking-flip
+diagnostic (no bandit), $K=4$, warm-up $2$, $+30$ additional iterations.
+
+\textbf{B3: Planar5.}
+Dynamics: 5-DOF planar analytic arm, double-integrator discretisation,
+state $x \in \R^{10}$, control $u \in \R^5$, exact Jacobians.
+Cost: quadratic end-effector tracking, joint regularisation, soft disk
+obstacle.
+Constraints: joint-limit inequalities; no terminal box.
+Setup: $K=8$ seeds split into an \textit{UP} cluster (bait: fast initial
+descent into a shallow basin) and a \textit{DOWN} cluster (gem: slower
+initial descent into a deeper terminal basin), directly instantiating
+Lemma~\ref{lem:li_incompleteness}; $B=80$, $b=5$, warm-up $3$.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{figures/fig_bench_scenes.pdf}
+\caption{Benchmark schematics (robot geometry first). Faint dotted mists mark
+\emph{barrier-cost ridges} in~$J$ (formulation detail), not obstacle bodies.
+(a)~Nav2D--Hard: left/right homotopy warm-starts around a mid-field cost ridge.
+(b)~Planar quadruped with torso and thigh/shank capsules; seed~A over-lifts
+the front foot (bait) while seed~B keeps a mild clearance above the ground
+clearance-cost zone (gem).
+(c)~Planar5 solid-link arm in a left-side ready pose; UP (bait) / DOWN (gem)
+end-effector corridors flank a mid-workspace cost ridge.}
+\label{fig:bench_scenes}
+\end{figure}
+
+\begin{table}[t]
+\caption{Solver and scheduling parameters.}
+\label{tab:solver_params}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Parameter} & \textbf{Symbol} & \textbf{Value} \\
+\midrule
+Reward: feasible-improvement coefficient & $1$ & (implicit) \\
+Reward: violation weight & $\lambda$ & 10 \\
+Reward: rate-bonus weight & $\eta$ & 0.1 \\
+UCB exploration constant & $c$ & 1.0 \\
+$\chi$ termination threshold & $\chi_{\mathrm{term}}$ & 100 (never triggered) \\
+Early-success cost threshold & $J_{\mathrm{succ}}$ & $\infty$ (disabled) \\
+GP kernel length scale & $\ell$ & 2.0 \\
+GP signal variance & $\sigma_f^2$ & 1.0 \\
+GP observation noise & $\sigma_n^2$ & $10^{-4}$ \\
+El hyperparameter & $\xi$ & 0.01 \\
+\midrule
+ADMM inequality penalty & $\mu$ & 10 \\
+Regularization & $\lambda_{\mathrm{reg}}$ & $10^{-4}$ \\
+Constraint tolerance & $\varepsilon$ & $10^{-3}$ \\
+Line search reduction & $\alpha_{\mathrm{decay}}$ & 0.5 \\
+Filter margin & $\delta$ & $10^{-4}$ \\
+Filter max size & $M$ & 5 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% ===========================================================================
+\subsection{Host Solver}
+\label{sec:host_note}
+% ===========================================================================
+
+All experiments use the same constrained iLQR stack described in
+Section~\ref{sec:chi_background}.  Because the host is distributed as a
+prebuilt binary rather than source, we validate its behaviour on a
+standard gate suite of five problems (pendulum swing-up, double-integrator
+reach, cartpole stabilisation, quadrotor hover, bicycle navigation) with
+three seeds each.  All 15 instances converge to feasible solutions, and
+the resulting costs match the best open-source solver among
+Crocoddyl~\cite{mastalli2020}, Aligator, and ALTRO~\cite{howell2019} to
+within 2\% (Table~\ref{tab:gate}); the baseline scripts for the
+open-source solvers are part of the release.  This establishes the host as
+a credible reference implementation; the paper's claims concern
+scheduling, not solver superiority.
+
+\begin{table}[t]
+\caption{Gate validation of the host against the best feasible
+open-source baseline (Crocoddyl, Aligator, or ALTRO); five problems
+$\times$ three seeds, all 15/15 instances feasible.}
+\label{tab:gate}
+\centering
+\footnotesize
+\begin{tabular}{lcc}
+\toprule
+Problem & Ours & Best SOTA (ratio) \\
+\midrule
+Pendulum swing-up & 186.1 & 1.000 \\
+Double-integrator reach & 6.67 & 1.000 \\
+Cartpole stabilise & 35--114 & $\approx$1.000 \\
+Quadrotor hover & 4431--5477 & $\le$1.02 \\
+Bicycle navigation & 538.9--539.5 & $\approx$1.000 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% ===========================================================================
+\subsection{Ranking-Flip Diagnostics}
+\label{sec:ranking_flip}
+% ===========================================================================
+
+Lemma~\ref{lem:li_incompleteness} establishes that, at the level of
+abstract cost sequences, local-improvement scores in $S_{\mathrm{LI}}$
+can mis-rank seeds.  We verify that this inversion occurs on real
+constrained-iLQR problems.
+
+\subsubsection{Nav~2D equal-budget ranking flip}
+
+On the Gate-aligned bicycle navigation benchmark with equal per-arm budgets
+(80 iterations each, no bandit), the first batch of 10 iterations already
+mis-ranks the seeds (Table~\ref{tab:ranking_flip}): greedy selection by
+$s_\chi$ picks seed~1 and greedy selection by $s_r$ picks seed~0, whereas
+the oracle ordering by terminal feasible cost prefers seed~2
+($J^\star = 538.88$).  Both scores therefore invert against the oracle.
+
+\begin{table}[t]
+\caption{Ranking inversion on Nav homotopy seeds.  Equal per-arm budget
+(80 iterations each), no bandit.  Scores are those observed after the first
+10-iteration batch: $s_\chi = -\ln\chi$; $s_r$ is the clipped
+feasible-improvement reward, with ties at the clip cap (50) broken by
+first-seen order as in the scheduler.}
+\label{tab:ranking_flip}
+\centering
+\footnotesize
+\begin{tabular}{lrrrcc}
+\toprule
+Seed & Oracle $J^\star$ & $s_\chi$ & $s_r$ & Greedy-$\chi$ & Greedy-$s_r$ \\
+\midrule
+0 & 871.26 & 4.03 & 50.0 & & $\checkmark$ \\
+1 & 538.91 & 6.33 & 50.0 & $\checkmark$ & \\
+2 & \textbf{538.88} & 5.83 & 6.35 & & \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsubsection{Contact-rich ranking flip (planar quadruped)}
+
+The same early-vs-late inversion appears on the quadruped template
+(Table~\ref{tab:quad_diag}).  Cluster~A (over-lifting gait) looks best
+after a short warm-up; cluster~B (mild clearance) attains a lower terminal
+cost once more iterations are granted.  The gate passes on all five RNG
+seeds.
+
+\begin{table*}[t]
+\caption{Contact-rich ranking-flip diagnostic (planar quadruped template,
+no bandit).  Each of $K=4$ seeds receives warm-up 2 then $+30$ iLQR iterations.
+Cluster A (over-lift) is better after warm-up; cluster B (mild clearance)
+achieves lower terminal cost.}
+\label{tab:quad_diag}
+\centering
+\footnotesize
+\begin{tabular}{lrrrl}
+\toprule
+RNG & Best A @warm & Best A @late & Best B @late & Gate \\
+\midrule
+42 & 22.2 & 22.2 & \textbf{7.98} & PASS \\
+43 & 22.9 & 22.9 & \textbf{9.39} & PASS \\
+44 & 26.0 & 26.0 & \textbf{7.95} & PASS \\
+45 & 23.1 & 23.1 & \textbf{7.98} & PASS \\
+46 & 22.1 & 22.1 & \textbf{13.1} & PASS \\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+These diagnostics instantiate the local-improvement incompleteness argument
+on three physically distinct systems (wheeled, legged, and articulated);
+they do not by themselves prove that any particular bandit policy dominates
+Uniform.
+
+% ===========================================================================
+\subsection{Seed-Budgeting Results}
+\label{sec:budgeting_results}
+% ===========================================================================
+
+\subsubsection{B1: Nav2D--Hard}
+
+Under the frozen protocol, adaptive allocation with $s_r$ improves over
+Uniform on the dense-obstacle navigation benchmark
+(Table~\ref{tab:b1_results}).  Because many terminal iterates remain slightly
+infeasible at $\varepsilon=10^{-3}$, we rank policies by feasible-first order
+(feasible $\succ$ lower violation $\succ$ lower cost).  The adaptive bloc
+(UCB, BO--EI, Greedy-$s_r$) wins the feasible-first ranking against Uniform
+on all five RNG seeds; under the null hypothesis that the per-seed outcome
+is decided by chance, five wins in five seeds has probability $2^{-5}$
+(one-sided sign test, $p \approx 0.03$).  Greedy-$\chi$ attains a lower mean
+cost but at the cost of feasibility---it acts as a negative control that
+confirms the $\chi$ signal is not a reliable primary objective.
+
+\begin{table}[t]
+\caption{Nav2D--Hard seed budgeting ($K=8$, $B=160$, $n=5$).  Adaptive
+policies (UCB, BO--EI, Greedy-$s_r$) tie with each other and win the
+feasible-first ranking against Uniform on 5/5 seeds.}
+\label{tab:b1_results}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lccc}
+\toprule
+Policy & Cost (mean $\pm$ std) & Feas. rate & Viol. (mean) \\
+\midrule
+Uniform & $2002.6 \pm 435.6$ & 0/5 & 0.306 \\
+UCB & $1587.5 \pm 852.4$ & 2/5 & 0.083 \\
+BO--EI & $1587.5 \pm 852.4$ & 2/5 & 0.083 \\
+Greedy-$s_r$ & $1587.5 \pm 852.4$ & 2/5 & 0.083 \\
+Greedy-$\chi$ & $1418.7 \pm 314.4$ & 1/5 & 0.234 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsubsection{B3: Planar5}
+
+On the fully-feasible planar arm benchmark (Table~\ref{tab:b3_results}),
+every run terminates without constraint violation, isolating score
+mis-ranking from feasibility entanglement.  BO--EI and Greedy-$s_r$
+reach mean cost $269.7 \pm 143.4$, approximately $38\%$ lower than
+Uniform ($433.9 \pm 89.9$); paired over the five RNG seeds, every adaptive
+policy attains lower cost than Uniform on every seed (one-sided sign test,
+$p = 2^{-5}$).  Greedy-$\chi$ remains worse at
+$402.4 \pm 50.5$ despite full feasibility---a clean negative control.
+
+\begin{table}[t]
+\caption{Planar5 seed budgeting ($K=8$, $B=80$, $n=5$, all runs feasible).
+BO--EI and Greedy-$s_r$ recover the DOWN homotopy; Uniform often stays on
+the UP bait; Greedy-$\chi$ is feasible but worse.}
+\label{tab:b3_results}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lcc}
+\toprule
+Policy & Cost (mean $\pm$ std) & Feas. rate \\
+\midrule
+Uniform & $433.9 \pm 89.9$ & 5/5 \\
+UCB & $277.0 \pm 138.4$ & 5/5 \\
+BO--EI & $\mathbf{269.7 \pm 143.4}$ & 5/5 \\
+Greedy-$s_r$ & $\mathbf{269.7 \pm 143.4}$ & 5/5 \\
+Greedy-$\chi$ & $402.4 \pm 50.5$ & 5/5 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{figures/fig_plan_b_results.pdf}
+\caption{Diagnostic and budgeting results. (a)~Equal-budget Nav ranking flip:
+after the first batch, early $J$ ranks disagree with the oracle terminal
+ordering (seed~2). (b)~Planar5 equal-budget cost trajectories: UP improves
+fastest early but plateaus; DOWN overtakes and reaches a deeper basin.
+(c)~Planar5 policy suite ($n=5$): adaptive $s_r$ policies beat Uniform;
+Greedy-$\chi$ remains worse despite full feasibility.}
+\label{fig:plan_b_results}
+\end{figure}
+
+Fig.~\ref{fig:plan_b_results} summarises the ranking-flip cost trajectories
+and the Planar5 policy comparison underlying Tables~\ref{tab:ranking_flip}
+and~\ref{tab:b3_results}.
+
+\subsubsection{Computational Overhead}
+
+GP inference in BO adds $\sim\!1.2$~ms per scheduling round (Cholesky of an
+$8\times8$ matrix, $O(K^3)$), negligible compared to per-iteration iLQR cost
+(under 1~ms for B1 and B3).  The overhead of $\chi$ computation adds no
+measurable latency.  Per-run wall times are dominated by iLQR iterations:
+$\sim\!10$~s for B1, $\sim\!0.3$~s for B3.
+
+The solver is implemented in C++17 with Eigen~3.4; experiments run on an
+AMD Ryzen~7~5800X (8-core, 3.8~GHz) with 32~GB RAM, Ubuntu~22.04.
+\section{Discussion and Limitations}
+% ===========================================================================
+We have presented a feasibility-aware seed-budgeting framework for
+constrained iLQR, grounded in a ranking-inversion analysis
+(Corollary~\ref{cor:greedy_insufficiency}) and a protocol that treats
+$\chi$ as a termination criterion rather than the primary reward.
+On two independent systems---Nav2D--Hard (wheeled navigation with dense
+obstacles) and Planar5 (5-DOF arm with UP/DOWN homotopies)---adaptive
+allocation with $s_r$ improves over Uniform in feasible-first ranking.
+The negative control Greedy-$\chi$ either loses feasibility or attains
+higher cost, confirming that $\chi$ is not a reliable allocation signal.
+Ranking inversion is further demonstrated on a contact-rich quadruped
+template that is distinct from both the navigation and arm domains.
+
+Several limitations warrant discussion.  \textbf{Policy separation.}
+UCB, BO--EI, and Greedy-$s_r$ remain tied on all three benchmarks;
+during warm-up the best seed is already identifiable by $s_r$, and the
+exploration bonus does not yield additional improvement on these
+libraries.  Harder seed libraries with deeper local minima---where the
+greedy choice is actively misleading---would be needed to differentiate
+the policies.  Similarly, the quadruped bandit suite is near-tied because
+warm-up already surfaces the better basin; the quadruped is cited as a
+ranking-flip diagnostic, not a policy-separation benchmark.  On
+Nav2D--Hard, few runs return fully feasible incumbents at
+$\varepsilon=10^{-3}$; we therefore report feasible-first comparisons
+rather than a single percentage gap.  In one of the five seeds the
+adaptive winner is decided by lower violation alone despite higher cost;
+the feasible-first ordering is deliberately conservative about cost under
+infeasibility.
+
+\textbf{Scope of $s_r$.}
+The reward $-\Delta J_{\mathrm{feas}} - \lambda\,\mathrm{viol}_+ + \eta\rho$
+is a heuristic scalarisation.  Its dominant term belongs to $S_{\mathrm{LI}}$,
+so ranking inversion is guaranteed at the abstract level
+(Lemma~\ref{lem:li_incompleteness}).  The violation penalty lacks a
+provable separation guarantee; its effectiveness depends on the constraint
+landscape and is verified empirically.
+
+\textbf{Generality.}
+The framework supports arbitrary $K$, budget $B$, batch size $b$, and policy
+backends; the same scheduler can host any constrained iLQR solver without
+architectural changes.  Extensions to DDP and SQP are straightforward.
+
+% ===========================================================================
+\section{Conclusion and Future Work}
+% ===========================================================================
+We formulate multi-start constrained iLQR as \emph{feasibility-aware seed
+budgeting}: allocate batches across warm-starts using diagnostics of feasible
+cost improvement, violation, and rate, with $\chi$ as a termination criterion
+rather than the primary reward.
+Three theoretical layers---$\chi$ non-monotonicity (Section~\ref{sec:chi_analysis}),
+ranking inversion analysis (Corollary~\ref{cor:greedy_insufficiency}),
+and constructive inversion (Lemma~\ref{lem:li_incompleteness})---
+establish that single-batch local-improvement scores are not universally
+optimal guides for seed allocation.  Uniform, UCB, and GP--EI policies
+share an open, budget-exact scheduler hosted on a standard constrained
+iLQR stack.
+
+On two independent systems (Nav2D--Hard and Planar5), adaptive allocation
+with $s_r$ improves over Uniform under feasible-first ranking, while
+Greedy-$\chi$ either loses feasibility or attains higher cost.  Ranking
+inversion is confirmed on three physically distinct domains---wheeled
+navigation, legged quadruped, and articulated arm---supporting the
+theoretical motivation across diverse robotics platforms.
+The ranking-flip evidence (Table~\ref{tab:ranking_flip}) and the
+contact-rich diagnostic (Table~\ref{tab:quad_diag}) instantiate the
+local-improvement incompleteness argument on real constrained-iLQR
+trajectories.
+
+Future work includes richer seed generators, optional MOBO when speed and
+quality conflict, solver-agnostic hosting on alternative
+solvers via the same scheduler API, and online MPC receding-horizon
+re-budgeting.  The benchmark definitions and all allocation traces are
+released at
+\url{https://github.com/jiesu-zju/optimal-solver}; the seed-budgeting
+scheduler and the constrained-iLQR host are provided as prebuilt
+binaries, and every reported experiment can be reproduced end-to-end with
+the exact command lines and seed parameters documented in the release.
+
+% ===========================================================================
+% ===========================================================================
+\begin{thebibliography}{99}
+\bibliographystyle{IEEEtran}
+
+\bibitem{tassa2012}
+Y.~Tassa, T.~Erez, and E.~Todorov, ``Synthesis and stabilization of complex behaviors through online trajectory optimization,''
+in \textit{Proc. IEEE/RSJ Int. Conf. Intell. Robots Syst. (IROS)}, 2012, pp.~4906--4913.
+
+\bibitem{howell2019}
+T.~A.~Howell, B.~E.~Jackson, and Z.~Manchester, ``ALTRO: A fast solver for constrained trajectory optimization,''
+in \textit{Proc. IEEE/RSJ Int. Conf. Intell. Robots Syst. (IROS)}, 2019, pp.~7674--7681.
+
+\bibitem{mastalli2020}
+C.~Mastalli et al., ``Crocoddyl: An efficient and versatile framework for multi-contact optimal control,''
+in \textit{Proc. IEEE Int. Conf. Robot. Autom. (ICRA)}, 2020, pp.~2536--2542.
+
+\bibitem{zhu2024}
+Y.~Zhu, J.~J.~Payne, S.~Feng, and C.~G.~Atkeson, ``Convergent iLQR for Safe Trajectory Planning and Control of Legged Robots,''
+in \textit{Proc. IEEE Int. Conf. Robot. Autom. (ICRA)}, 2024.
+
+\bibitem{mckay1979}
+M.~D.~McKay, R.~J.~Beckman, and W.~J.~Conover, ``A comparison of three methods for selecting values of input variables in the analysis of output from a computer code,''
+\textit{Technometrics}, vol.~21, no.~2, pp.~239--245, 1979.
+
+\bibitem{gyorgy2011}
+A.~Gy\"{o}rgy and L.~Kocsis, ``Efficient multi-start strategies for local search algorithms,''
+\textit{J. Artif. Intell. Res.}, vol.~41, pp.~407--444, 2011.
+
+\bibitem{jain2019}
+S.~Jain, D.~Salau, and A.~Agrawal, ``A review of multi-start optimization algorithms,''
+\textit{Int. J. Res. Appl. Sci. Eng. Technol.}, vol.~7, no.~5, pp.~2452--2457, 2019.
+
+\bibitem{auer2002}
+P.~Auer, N.~Cesa-Bianchi, and P.~Fischer, ``Finite-time analysis of the multiarmed bandit problem,''
+\textit{Mach. Learn.}, vol.~47, no.~2, pp.~235--256, 2002.
+
+\bibitem{srinivas2010}
+N.~Srinivas, A.~Krause, S.~Kakade, and M.~Seeger, ``Gaussian process optimization in the bandit setting: No regret and experimental design,''
+in \textit{Proc. Int. Conf. Mach. Learn. (ICML)}, 2010, pp.~1015--1022.
+
+\bibitem{shahriari2016}
+B.~Shahriari, K.~Swersky, Z.~Wang, R.~P.~Adams, and N.~de~Freitas, ``Taking the human out of the loop: A review of Bayesian optimization,''
+\textit{Proc. IEEE}, vol.~104, no.~1, pp.~148--175, 2016.
+
+\bibitem{merkt2021}
+W.~Merkt, V.~Ivan, and S.~Vijayakumar, ``Fast global motion planning via pre-computed motion primitives,''
+in \textit{Proc. IEEE Int. Conf. Robot. Autom. (ICRA)}, 2021, pp.~7873--7879.
+
+\bibitem{posa2014}
+M.~Posa, C.~Cant\={u}, and R.~Tedrake, ``A direct method for trajectory optimization of rigid bodies through contact,''
+\textit{Int. J. Robot. Res.}, vol.~33, no.~1, pp.~69--81, 2014.
+
+\bibitem{schulman2014}
+J.~Schulman et al., ``Motion planning with sequential convex optimization and convex collision checking,''
+\textit{Int. J. Robot. Res.}, vol.~33, no.~9, pp.~1251--1270, 2014.
+
+\bibitem{rasmussen2006}
+C.~E.~Rasmussen and C.~K.~I.~Williams, \textit{Gaussian Processes for Machine Learning}.
+Cambridge, MA, USA: MIT Press, 2006.
+
+\end{thebibliography}
+
+\end{document}

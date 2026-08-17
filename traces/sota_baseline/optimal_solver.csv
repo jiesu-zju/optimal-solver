@@ -1,0 +1,16 @@
+solver,problem,seed,converged,feasible,termination_reason,final_cost,eq_violation,ineq_violation,dynamics_violation,iterations,time_ms,chi
+optimal_solver,pendulum_swingup,0,1,1,CONVERGED,186.108,0,0,0,4,15.4133,2.23327e-10
+optimal_solver,double_integrator_reach,0,0,1,MAX_ITER,6.66568,0,0,0,60,146.831,0.00555436
+optimal_solver,cartpole_stabilize,0,1,1,CONVERGED,35.0314,0,0,0,3,14.793,0.951695
+optimal_solver,quadrotor_hover,0,0,1,MAX_ITER,4491.29,0,0,0,150,453.326,4.80779
+optimal_solver,nav_2d_bicycle,0,1,1,CONVERGED,538.881,0,0,0,34,174.623,0.00117616
+optimal_solver,pendulum_swingup,1,1,1,CONVERGED,186.108,0,0,0,4,5.70518,2.23327e-10
+optimal_solver,double_integrator_reach,1,0,1,MAX_ITER,6.66568,0,0,0,60,64.8024,0.00555436
+optimal_solver,cartpole_stabilize,1,1,1,CONVERGED,113.854,0,0,0,4,14.5062,0.924152
+optimal_solver,quadrotor_hover,1,1,1,CONVERGED,5476.69,0,0,0,9,9.54151,0.406736
+optimal_solver,nav_2d_bicycle,1,1,1,CONVERGED,538.906,0,0,0,16,83.0403,0.00134602
+optimal_solver,pendulum_swingup,2,1,1,CONVERGED,186.108,0,0,0,4,5.42789,2.23327e-10
+optimal_solver,double_integrator_reach,2,0,1,MAX_ITER,6.66568,0,0,0,60,55.2785,0.00555436
+optimal_solver,cartpole_stabilize,2,1,1,CONVERGED,77.0429,0,0,0,4,12.7121,0.937082
+optimal_solver,quadrotor_hover,2,0,1,MAX_ITER,4430.78,0,0,0,150,359.612,5.76664
+optimal_solver,nav_2d_bicycle,2,0,1,MAX_ITER,539.515,0,0,0,80,769.835,1.1429

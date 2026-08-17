@@ -1,0 +1,35 @@
+{
+  "B1": {
+    "Uniform":   {"cost_mean": 2002.58, "cost_std": 435.611, "feas_count": 0, "viol_mean": 0.305849},
+    "UCB":       {"cost_mean": 1587.49, "cost_std": 852.352, "feas_count": 2, "viol_mean": 0.0829392},
+    "BO-EI":     {"cost_mean": 1587.49, "cost_std": 852.352, "feas_count": 2, "viol_mean": 0.0829392},
+    "Greedy-s_r":{"cost_mean": 1587.49, "cost_std": 852.352, "feas_count": 2, "viol_mean": 0.0829392},
+    "Greedy-\u03c7":{"cost_mean": 1418.72, "cost_std": 314.442, "feas_count": 1, "viol_mean": 0.233917}
+  },
+  "B3": {
+    "Uniform":   {"cost_mean": 433.921, "cost_std": 89.9444, "feas_count": 5},
+    "UCB":       {"cost_mean": 277.043, "cost_std": 138.364, "feas_count": 5},
+    "BO-EI":     {"cost_mean": 269.703, "cost_std": 143.421, "feas_count": 5},
+    "Greedy-s_r":{"cost_mean": 269.703, "cost_std": 143.421, "feas_count": 5},
+    "Greedy-\u03c7":{"cost_mean": 402.427, "cost_std": 50.5193, "feas_count": 5}
+  },
+  "B2_diag": {
+    "42": [22.2272, 22.2272, 7.97535],
+    "43": [22.926,  22.926,  9.39083],
+    "44": [25.9668, 25.9668, 7.95341],
+    "45": [23.056,  23.056,  7.98459],
+    "46": [22.113,  22.113,  13.0677]
+  },
+  "ranking_flip": {
+    "0": {"oracle_J": 871.257, "s_chi_batch0": 4.02971, "s_r_batch0": 50.0},
+    "1": {"oracle_J": 538.905, "s_chi_batch0": 6.32722, "s_r_batch0": 50.0},
+    "2": {"oracle_J": 538.875, "s_chi_batch0": 5.83364, "s_r_batch0": 6.35085}
+  },
+  "gate": {
+    "pendulum_swingup":      {"feasible": 15, "cost_min": 186.108, "cost_max": 186.108, "max_ratio": 1.001},
+    "double_integrator_reach":{"feasible": 15, "cost_min": 6.66568, "cost_max": 6.66568, "max_ratio": 1.001},
+    "cartpole_stabilize":    {"feasible": 15, "cost_min": 35.0, "cost_max": 114.0, "max_ratio": 1.005},
+    "quadrotor_hover":       {"feasible": 15, "cost_min": 4431.0, "cost_max": 5477.0, "max_ratio": 1.02},
+    "nav_2d_bicycle":        {"feasible": 15, "cost_min": 538.9, "cost_max": 539.5, "max_ratio": 1.005}
+  }
+}

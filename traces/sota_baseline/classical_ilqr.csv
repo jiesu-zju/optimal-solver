@@ -1,0 +1,10 @@
+solver,problem,seed,converged,feasible,termination_reason,final_cost,eq_violation,ineq_violation,dynamics_violation,iterations,time_ms,chi
+classical_ilqr,pendulum_swingup,0,0,1,MAX_ITER,186.64842052971713,0,0,0,80,3044.0012460167054,0
+classical_ilqr,double_integrator_reach,0,0,1,MAX_ITER,6.665675609597025,0,0,0,60,1059.7637379833031,0
+classical_ilqr,nav_2d_bicycle,0,0,1,MAX_ITER,626.6908375930618,0,0.0,0,80,10839.185151999118,0
+classical_ilqr,pendulum_swingup,1,0,1,MAX_ITER,186.64842052971713,0,0,0,80,4273.316833015997,0
+classical_ilqr,double_integrator_reach,1,0,1,MAX_ITER,6.665675609597025,0,0,0,60,1586.2391059927177,0
+classical_ilqr,nav_2d_bicycle,1,0,1,MAX_ITER,726.123956227009,0,0.0,0,80,21251.13148498349,0
+classical_ilqr,pendulum_swingup,2,0,1,MAX_ITER,186.64842052971713,0,0,0,80,6302.062083006604,0
+classical_ilqr,double_integrator_reach,2,0,1,MAX_ITER,6.665675609597025,0,0,0,60,1194.2306489800103,0
+classical_ilqr,nav_2d_bicycle,2,0,1,MAX_ITER,626.6908375930618,0,0.0,0,80,7789.345333992969,0
