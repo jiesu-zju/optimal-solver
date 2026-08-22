@@ -13,6 +13,13 @@
     "Greedy-s_r":{"cost_mean": 269.703, "cost_std": 143.421, "feas_count": 5},
     "Greedy-\u03c7":{"cost_mean": 402.427, "cost_std": 50.5193, "feas_count": 5}
   },
+  "B2_suite": {
+    "Uniform":   {"cost_mean": 10.4731, "cost_std": 0.468014, "feas_count": 5},
+    "UCB":       {"cost_mean": 10.298,  "cost_std": 0.804086, "feas_count": 5},
+    "BO-EI":     {"cost_mean": 10.298,  "cost_std": 0.804086, "feas_count": 5},
+    "Greedy-s_r":{"cost_mean": 10.298,  "cost_std": 0.804086, "feas_count": 5},
+    "Greedy-\u03c7":{"cost_mean": 11.128,  "cost_std": 0.607524, "feas_count": 5}
+  },
   "B2_diag": {
     "42": [22.2272, 22.2272, 7.97535],
     "43": [22.926,  22.926,  9.39083],
@@ -21,9 +28,9 @@
     "46": [22.113,  22.113,  13.0677]
   },
   "ranking_flip": {
-    "0": {"oracle_J": 871.257, "s_chi_batch0": 4.02971, "s_r_batch0": 50.0},
-    "1": {"oracle_J": 538.905, "s_chi_batch0": 6.32722, "s_r_batch0": 50.0},
-    "2": {"oracle_J": 538.875, "s_chi_batch0": 5.83364, "s_r_batch0": 6.35085}
+    "0": {"oracle_J": 871.257, "chi_batch0": 0.0177794, "s_r_batch0": 50.0},
+    "1": {"oracle_J": 538.905, "chi_batch0": 0.00178699, "s_r_batch0": 50.0},
+    "2": {"oracle_J": 538.875, "chi_batch0": 0.00292739, "s_r_batch0": 6.35085}
   },
   "gate": {
     "pendulum_swingup":      {"feasible": 15, "cost_min": 186.108, "cost_max": 186.108, "max_ratio": 1.001},

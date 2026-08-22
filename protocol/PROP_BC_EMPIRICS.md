@@ -9,12 +9,12 @@ per_arm=80 batch=10
 | 2 | 538.875 (yes) |
 
 Oracle (min feasible J*): seed **2**
-Greedy on s_χ after batch 0: seed **1**
+Greedy on lowest χ after batch 0: seed **1**
 Greedy on s_r after batch 0: seed **0**
 
-| Score | Ranking flip vs oracle? |
-|-------|-------------------------|
-| s_χ = -log χ | **YES (supports Prop. B+C)** |
+| Rule | Misses the oracle arm? |
+|------|------------------------|
+| χ (lowest-χ greedy rule) | **YES (supports Prop. B+C)** |
 | s_r = FEAS_IMPROVE | **YES (supports Prop. B+C)** |
 
 Curves: `ranking_flip_curves.csv`. Theory: `THEORY_RANKING.md`.

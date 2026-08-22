@@ -18,11 +18,11 @@ Exit code 0 = all checks pass; 1 = at least one mismatch.
 
 | Paper table | Data source | Check |
 |---|---|---|
-| Table III (ranking flip, Nav) | `traces/ranking_flip_curves.csv` | oracle J\* per seed, batch-0 `s_χ`/`s_r` scores, greedy picks (s_χ→seed 1, s_r→seed 0) |
+| Table III (ranking flip, Nav) | `traces/ranking_flip_curves.csv` | oracle J\* per seed, batch-0 `χ`/`s_r` values, greedy picks (lowest χ→seed 1, s_r→seed 0) |
 | Table IV (quadruped diag) | `traces/plan_b_freeze/raw/quadruped_diag_4X.log` | best-A@warm / best-A@late / best-B@late per RNG 42–46 |
-| Table V (B1 Nav2D–Hard) | `traces/plan_b_freeze/nav2d_hard_multiseed.csv` | per-policy mean±std cost, feasibility rate, mean violation; budget accounting on all rows |
-| Table VI (B3 Planar5) | `traces/plan_b_freeze/planar5_multiseed.csv` | per-policy mean±std cost, feasibility rate |
-| Table VII (Gate validation) | `traces/sota_baseline/*.csv` | 15/15 instances feasible; per-instance cost ratio vs best feasible open-source baseline ≤ threshold per problem |
+| Table VI (B1 Nav2D–Hard) | `traces/plan_b_freeze/nav2d_hard_multiseed.csv` | per-policy mean±std cost, feasibility rate, mean violation; budget accounting on all rows |
+| Table VII (B3 Planar5) | `traces/plan_b_freeze/planar5_multiseed.csv` | per-policy mean±std cost, feasibility rate |
+| Table II (Gate validation) | `traces/sota_baseline/*.csv` | 15/15 instances feasible; per-instance cost ratio vs best feasible open-source baseline ≤ threshold per problem |
 
 Tolerances: absolute 0.06 for rounded mean/std/violation values (the JSON holds
 the full-precision values from the summary CSVs); per-instance Gate ratios are

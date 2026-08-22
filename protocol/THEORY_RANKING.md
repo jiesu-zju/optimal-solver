@@ -12,9 +12,9 @@
   \[
   d_i(t)=\bigl(J^{\mathrm{before}},\,J^{\mathrm{after}},\,v,\,\chi,\,b_{\mathrm{used}}\bigr).
   \]
-- Instantaneous **score** \(s(d)\) is any scalar used for greedy selection. Two scores of interest:
-  - \(s_\chi=-\log\chi\) (negative control),
-  - \(s_r=-\Delta J_{\mathrm{feas}}-\lambda\mathrm{viol}_++\eta\rho\) (PROTOCOL_v1).
+- Instantaneous **score** \(s(d)\) is any scalar used for greedy selection. Two greedy rules of interest:
+  - the **lowest-\(\chi\) rule** (negative control: pull the arm with the smallest \(\chi\)),
+  - the **\(s_r\) rule** (PROTOCOL_v1) with \(s_r=-\Delta J_{\mathrm{feas}}-\lambda\mathrm{viol}_++\eta\rho\).
 - After a fixed total budget (or equal per-arm budget), arm \(i\) has terminal feasible cost \(J_i^\star\) (∞ if never feasible).  
   **Oracle ranking** is by \(J_i^\star\) (feasible-first).
 
@@ -45,7 +45,7 @@ Then \(\|\tilde A_k\|_2=10\), \(\|\tilde A'_k\|_2=9.9\), but
 \]
 \hfill\(\square\)
 
-**Role.** Shows that even a “locally improving” linearization can raise \(\chi\). Therefore **greedy-on-\(\chi\)** is not justified by per-step contraction alone. (This does **not** claim \(s_\chi\) is a good paper reward.)
+**Role.** Shows that even a “locally improving” linearization can raise \(\chi\). Therefore **greedy-on-\(\chi\)** is not justified by per-step contraction alone. (This motivates the \(\chi\)-greedy negative control; \(\chi\) is not part of the primary reward in the manuscript.)
 
 ---
 
@@ -93,7 +93,7 @@ Terminal: \(J_A^\star=180>J_B^\star=50\).
 
 **Thus** \(s_r(d_A(1))>s_r(d_B(1))\) but \(J_A^\star>J_B^\star\): Prop.\ B applies to \(s_r\).
 
-For \(s_\chi\), any path where arm A has tiny \(\chi\) after pull 1 but stagnates at high \(J\), while B has larger \(\chi\) then reaches low \(J\), yields the same inversion (realized on Nav χ-probe; see Empirics).
+For the lowest-\(\chi\) rule, any path where arm A has tiny \(\chi\) after pull 1 but stagnates at high \(J\), while B has larger \(\chi\) then reaches low \(J\), yields the same inversion (realized on the Nav \(\chi\)-probe; see Empirics).
 
 \hfill\(\square\) (constructive)
 
@@ -116,7 +116,7 @@ for some \(\delta>0\) (e.g.\ deep basin still yields nonnegative feasible \(\Del
 **Proof sketch.** Immediate from the displayed inequality: the better arm’s reward process dominates in expectation, so a bandit that estimates means has a detectable gap \(\delta\).  
 \hfill\(\square\)
 
-**Caveat (honesty).** The dominance assumption is **not** automatic for \(s_\chi\) (Nav χ-probe: best-\(J\) arm had worst \(-\log\chi\)). For \(s_r\), dominance is an empirical hypothesis to verify per problem class. Prop.\ D explains when UCB/BO have **something to learn**; Prop.\ B–C explain why they must **explore**.
+**Caveat (honesty).** The dominance assumption is **not** automatic for the lowest-\(\chi\) rule (Nav \(\chi\)-probe: the best-\(J\) arm did not have the smallest \(\chi\)). For \(s_r\), dominance is an empirical hypothesis to verify per problem class. Prop.\ D explains when UCB/BO have **something to learn**; Prop.\ B–C explain why they must **explore**.
 
 ---
 
@@ -125,7 +125,7 @@ for some \(\delta>0\) (e.g.\ deep basin still yields nonnegative feasible \(\Del
 | Result | Implies |
 |--------|---------|
 | Prop.\ A | \(\chi\) itself is a fragile monotone proxy |
-| Prop.\ B+C | Instantaneous \(s_r\) or \(s_\chi\) can disagree with \(J^\star\) ⇒ **greedy fails** ⇒ UCB exploration / BO uncertainty is necessary |
+| Prop.\ B+C | Greedy rules based on \(s_r\) or on \(\chi\) can disagree with \(J^\star\) ⇒ **greedy fails** ⇒ UCB exploration / BO uncertainty is necessary |
 | Prop.\ D (when verified) | Mean rewards still carry basin identity ⇒ bandit is not vacuous |
 
 Bayesian optimization is motivated as: maintain a surrogate over **features of \(d_i\)** predicting \(s_r\) (or cumulative return), using posterior uncertainty to explore arms whose early \(r\) looks weak but may become strong—precisely the C1 pattern.
@@ -139,11 +139,11 @@ Artifacts from `./build/examples/probe_ranking_flip` (equal per-arm budget, no b
 | Result | Detail |
 |--------|--------|
 | Oracle \(J^\star\) | seed **2** (538.875) |
-| Greedy \(s_\chi\) after batch 0 | seed **1** → **flip** |
+| Greedy lowest-\(\chi\) after batch 0 | seed **1** → **flip** |
 | Greedy \(s_r\) after batch 0 | seed **0** → **flip** |
 | Curves | `ranking_flip_curves.csv` |
 | Summary | `PROP_BC_EMPIRICS.md` |
 
 Algebraic checks: `python3 verify_prop_AC.py` (Prop.\ A + constructive C1).
 
-**Interpretation:** Both scores exhibit ranking inversion on real Nav iLQR ⇒ Prop.\ B applies ⇒ greedy insufficient ⇒ UCB/BO exploration motivated. Separability of mean \(s_r\) on harder libraries remains a follow-up measurement (Prop.\ D).
+**Interpretation:** Both greedy rules miss the oracle arm on real Nav iLQR ⇒ Prop.\ B applies ⇒ greedy insufficient ⇒ UCB/BO exploration motivated. Separability of mean \(s_r\) on harder libraries remains a follow-up measurement (Prop.\ D).

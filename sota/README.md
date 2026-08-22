@@ -1,4 +1,4 @@
-# sota/ — open-source baseline runners (Gate validation, Table VII)
+# sota/ — open-source baseline runners (Gate validation, Table II)
 
 These scripts re-run the open-source trajectory-optimization baselines used to
 validate the (binary) host solver on the five-problem Gate suite.  They are
@@ -15,7 +15,7 @@ independent of the host: only the released problem definitions
 | `quadrotor_hover` | 2D quad hover; 0≤T≤15 |
 | `nav_2d_bicycle` | Bicycle + soft obstacles + control box |
 
-## Reproduce the baseline side of Table VII
+## Reproduce the baseline side of Table II
 
 ```bash
 # Crocoddyl (Python)

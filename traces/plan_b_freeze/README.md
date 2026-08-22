@@ -2,7 +2,7 @@
 
 This directory is the frozen output of the manuscript's Plan-B protocol
 (`run_freeze.sh` at the repository root re-runs it).  It is the reference
-artifact set behind Tables III–VII of the manuscript.
+artifact set behind Tables II–VII of the manuscript.
 
 ## Layout
 
@@ -14,20 +14,40 @@ artifact set behind Tables III–VII of the manuscript.
 | `raw/*_{bench}_{rng}.csv` | Per-RNG suite outputs |
 | `diag_status.csv` | Exit codes of the diagnostic runs |
 
+Per-pull allocation events are *not* dumped by the suite probe; the suite
+data here are per-run summaries.  Complete per-pull allocation traces exist
+for the v1 Nav protocol only (`../trace_v1_*.csv`; see the top-level
+`README.md`), together with the per-batch ranking-flip curves
+(`../ranking_flip_curves.csv`).
+
 ## Interpreting `diag_status.csv`
 
 - `exit_code = 0` — all diagnostic gates PASS for that (benchmark, RNG).
-- `exit_code = 1` — the **planar5** inversion gate FAILED for that RNG
-  (`best_down@late` did not reach `0.92 × best_up@late`; e.g. RNG 44:
-  140.95 vs 145.44).  The manuscript does **not** use the planar5 diagnostic
-  for its inversion table: Table IV cites the quadruped diagnostic, which
-  passes 5/5, and the planar5 inversion evidence is carried by the B3 policy
-  suite (UP bait vs DOWN gem cost separation) plus the Nav ranking-flip table.
-  The failed planar5 gates therefore affect no reported number.
+- `exit_code = 1` — the diagnostic gate FAILED for that RNG.
+
+Since the 2026-08-21 gate fix, the inversion gates check **both** ends of the
+flip: the bait cluster must lead after warm-up **and** the gem cluster must
+win the late check by a margin of at least 8% (`gem@late < 0.92 × bait@late`).
+
+- Quadruped (Table IV of the manuscript): **5/5 PASS** — cluster A
+  (over-lift) leads after warm-up and cluster B (mild clearance) wins late on
+  every RNG.
+- Planar5: **1/5 PASS** (rng-46).  On rngs 42–45 the DOWN cluster already
+  leads at warm-up, so no early-to-late flip occurs there; on rng-44 the late
+  margin is additionally only ≈3% (140.95 vs 145.44, below the 8% threshold).
+  The manuscript does **not** use the planar5 diagnostic for its inversion
+  table: Table IV cites the quadruped diagnostic, which passes 5/5, and the
+  planar5 inversion evidence is carried by the B3 policy suite (UP bait vs
+  DOWN gem cost separation) plus the Nav ranking-flip table.  The failed
+  planar5 gates therefore affect no reported number.
 
 ## Provenance
 
 Traces were produced on 2026-08-04 and re-verified on 2026-08-16: the shipped
-binary (`../host/bin/probe_seed_budget_suite`) rebuilds bit-identically
-(SHA256 `59465c4a…`) and a full protocol re-run reproduces these files
-bit-for-bit.
+binary (`../host/bin/probe_seed_budget_suite`) reproduced the suite numbers
+bit-for-bit (SHA256 `59465c4a…`).  On 2026-08-21 the diagnostic gates were
+fixed (early warm-up ordering check added) and the diag logs + `diag_status.csv`
+regenerated with the rebuilt binary (SHA256 `56a1ac75…`): every per-seed
+number in the diag logs is unchanged; only the gate verdicts changed.  A full
+protocol re-run with the rebuilt binary reproduces all 75 suite rows
+bit-for-bit (only `wall_ms` differs).

@@ -11,16 +11,21 @@ this release.
 | `bin/probe_seed_budget_suite` | Runs the paper's B1/B2/B3 protocol (suites + diagnostics); produces the CSVs/logs in `traces/plan_b_freeze/` |
 | `bin/probe_ranking_flip` | Equal-budget ranking-flip probe (Table III) |
 | `bin/probe_seed_budget_nav` | Navigation seed-budgeting probe (protocol v1) |
-| `bin/bench_vs_sota` | Host-side Gate runner (Table VII) |
+| `bin/bench_vs_sota` | Host-side Gate runner (Table II) |
 
 All binaries are x86-64 Linux (built on Ubuntu 22.04, glibc ≥ 2.35), statically
 linked against the solver core; they require only the system C/C++ runtime and
 OpenMP.  `bin/SHA256SUMS` pins the exact artifacts; the checksums are also
 recorded in the release notes.
 
-**Provenance:** the binaries were built on 2026-08-16 from the private source
-revision that reproduces the frozen traces (re-verified by re-running the
-protocol and comparing with `traces/plan_b_freeze/` — see the release notes).
+**Provenance:** the binaries were built from the private source revision that
+reproduces the frozen traces (re-verified by re-running the protocol and
+comparing with `traces/plan_b_freeze/`).  On 2026-08-21 `probe_seed_budget_suite`
+was rebuilt with a **diagnostic-gate fix only** (the planar5/quadruped
+inversion gates now also check the early warm-up ordering, so a "PASS" means a
+genuine early-to-late flip; the solver path and all suite numbers are
+unchanged — verified bit-identically by a full re-run; see
+`traces/plan_b_freeze/README.md`).  `bin/SHA256SUMS` pins the exact artifacts.
 The same binary interface (`--bench`, `--seeds`, `--K`, `--diag`, `--out`) is
 used by `../run_freeze.sh`.
 

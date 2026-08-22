@@ -1,11 +1,11 @@
 bench,seed_rng,exit_code
-planar5,42,0
+planar5,42,1
 quadruped,42,0
-planar5,43,0
+planar5,43,1
 quadruped,43,0
 planar5,44,1
 quadruped,44,0
-planar5,45,0
+planar5,45,1
 quadruped,45,0
 planar5,46,0
 quadruped,46,0

@@ -11,9 +11,9 @@ Kernel Gate S1/S2 (parity vs Crocoddyl/Aligator/ALTRO) establishes a **trusted h
 ## Known facts (do not re-litigate)
 
 1. Host: Gate validation 15/15 vs Crocoddyl/Aligator/ALTRO — see `traces/sota_baseline/`.
-2. The \(r=-\log\chi\) reward starves the best-cost seed under UCB on Nav and is used only as a negative control.
+2. The Greedy-\(\chi\) negative control (pull the arm with the lowest \(\chi\)) is unreliable on Nav: the best-cost arm does not have the smallest \(\chi\).
 3. Batch semantics: each pull constructs a **fresh** `ConstrainedILQR` + ADMM; only the **trajectory** warm-starts. Duals / Filter do **not** persist.
-4. **Theory of ranking:** `THEORY_RANKING.md` (Prop.\ A–D). Empirics: both \(s_\chi\) and \(s_r\) flip vs oracle \(J^\star\) on equal-budget Nav arms (`PROP_BC_EMPIRICS.md`).
+4. **Theory of ranking:** `THEORY_RANKING.md` (Prop.\ A–D). Empirics: greedy rules based on \(s_r\) or on \(\chi\) miss the oracle arm on equal-budget Nav arms (`PROP_BC_EMPIRICS.md`).
 
 ## Reward (Candidate A) + χ switch (Candidate C)
 
@@ -48,8 +48,9 @@ r = \mathrm{clip}\!\left(-\Delta J_{\mathrm{feas}} - \lambda\,\mathrm{viol}_+ + 
 
 **χ switch (not in \(r\)):** if after-batch \(\chi > \chi_{\mathrm{cut}}=10^{2}\) or solver throws → arm **terminated**. χ, viol, \(\rho\), \(\Delta J\) are logged and used as **BO features**.
 
-The \(-\log\chi\) reward mode is available in the released binary for the
-Greedy-\(\chi\) negative control only; the primary reward is \(s_r\) above.
+The Greedy-\(\chi\) negative control pulls the arm with the lowest \(\chi\); the
+primary reward is \(s_r\) above, and \(\chi\) enters only through the
+termination switch, the BO features, and this control rule.
 
 ## Phase-1 Nav protocol
 
@@ -73,7 +74,7 @@ Greedy-\(\chi\) negative control only; the primary reward is \(s_r\) above.
 ### Phase-1 pass criteria (diagnostic, not significance)
 
 - Budget accounting: \(\sum_i \mathrm{iters}_i = \mathrm{allocated} \le B\).
-- UCB/BO must **not** systematically starve the post-hoc best-cost arm (χ-probe failure mode).
+- UCB/BO must **not** systematically starve the post-hoc best-cost arm.
 - Success vs Uniform: best feasible cost **not worse**, **and** near-opt iters **strictly fewer**; **or** best feasible cost **strictly better** at same \(B\).
 
 Phase 1 does **not** claim statistical significance. Phase 2: \(N\ge 5\) RNG replicates.

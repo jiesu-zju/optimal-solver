@@ -9,5 +9,5 @@ seed,side,cost@warm,cost@late,chi@late
 5,D,1749.67,460.293,0.0733526
 6,D,1405.69,160.942,2.04581e-07
 7,D,2535.64,642.553,2.20684e-06
-best_up@warm=1469.62 best_up@late=487.414 best_down@late=160.942
-GATE inversion (down@late < 0.92*up@late): PASS
+best_up@warm=1469.62 best_up@late=487.414 best_down@warm=1405.69 best_down@late=160.942
+GATE inversion (up@warm < down@warm and down@late < 0.92*up@late): FAIL

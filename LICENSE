@@ -22,6 +22,18 @@ SOFTWARE.
 
 ---
 
-Scope note: this license applies to the code and documents in this repository
-outside `host/bin/` (the prebuilt host binaries, which are distributed under
-the separate research-only terms stated in `host/README.md`).
+Scope note (narrowed 2026-08-21):
+
+The MIT license above applies ONLY to the author-authored layers of this
+repository: the verification scripts (`verify/`), the open-source baseline
+runners and gate configurations (`sota/`, excluding third-party software,
+which retains its own licenses — see `NOTICE.md`), the protocol and
+benchmark documents (`protocol/`, `benchmarks/`), the experimental data in
+`traces/`, and the documentation (including `README.md` and this file).
+
+It does NOT apply to:
+
+- `host/bin/` — the prebuilt host binaries are distributed for research
+  reproduction only, under the separate terms in `host/README.md`;
+- the manuscript (not included in this repository while under review);
+- third-party software or data (see `NOTICE.md`).

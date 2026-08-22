@@ -48,7 +48,8 @@ Obstacle disks `(c_i, r_i)`:
 (control boxes projected; κ box as inequality).  **Terminal box:**
 `|x−10| ≤ 0.5`, `|y| ≤ 0.3`, `|θ| ≤ 0.3`, `|κ| ≤ 0.5`.
 
-**Seeds (K=8), `generate_seeds_lhs_noise`:** RNG = `mt19937(rng)` where `rng`
+**Seeds (K=8), `generate_seeds_lhs_noise`** (the generator name is
+historical: the draws are i.i.d. uniform, not Latin-hypercube): RNG = `mt19937(rng)` where `rng`
 is the run's RNG id (42…46).  Seeds 0–3 start with heading bias `θ₀ = +0.35 rad`,
 seeds 4–7 with `θ₀ = −0.35 rad`.  For each step `k` with `a = k/(N−1)` and
 envelope `e = 4a(1−a)`:
@@ -142,7 +143,7 @@ double-integrator torques, then re-rollout with control clamping.
 
 ---
 
-## Gate suite (host validation, Table VII)
+## Gate suite (host validation, Table II)
 
 | Problem | N | dt | State/Control | Notes |
 |---|---|---|---|---|
@@ -162,7 +163,7 @@ feasible baseline cost on all 15/15 instances.
 ## Protocol parameters (all three benchmarks, frozen)
 
 - Reward: `r = clip(−ΔJ_feas − 10·viol₊ + 0.1·ρ, −50, 50)`, `ε = 1e-3`
-  (see manuscript Eq. (2)–(5) and `../protocol/PROTOCOL_v1.md`).
+  (see manuscript Eq. (3) and `../protocol/PROTOCOL_v1.md`).
 - χ termination threshold `χ_term = 100` (enabled in code; never triggered in
   any reported run).  Early-success threshold = ∞ (disabled).
 - RNG ids `{42, 43, 44, 45, 46}`; warm-up/batch/budget per Table I of the

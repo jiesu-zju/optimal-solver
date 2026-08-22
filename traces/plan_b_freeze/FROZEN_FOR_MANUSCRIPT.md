@@ -84,21 +84,26 @@ Gate pass rate: **5/5**.
 ## Table L2b — Planar5 ranking-flip diag
 Equal per-seed budget (warm=pack.warmup=3, late+=…), K=8.
 
-| seed_rng | best_UP@warm | best_UP@late | best_DOWN@late | inversion | overall |
-|----------|--------------|--------------|----------------|-----------|----------|
-| 42 | 1.47e+03 | 487 | 161 | PASS | PASS |
-| 43 | 1.56e+03 | 555 | 227 | PASS | PASS |
-| 44 | 1.47e+03 | 145 | 141 | FAIL | FAIL |
-| 45 | 1.23e+03 | 487 | 404 | PASS | PASS |
-| 46 | 1.39e+03 | 440 | 330 | PASS | PASS |
+| seed_rng | best_UP@warm | best_DOWN@warm | best_UP@late | best_DOWN@late | flip gate | overall |
+|----------|--------------|----------------|--------------|----------------|-----------|----------|
+| 42 | 1.47e+03 | 1.41e+03 | 487 | 161 | FAIL (DOWN@warm leads) | FAIL |
+| 43 | 1.56e+03 | 1.56e+03 | 555 | 227 | FAIL (DOWN@warm leads) | FAIL |
+| 44 | 1.47e+03 | 1.47e+03 | 145 | 141 | FAIL (DOWN@warm leads; late margin 3%) | FAIL |
+| 45 | 1.23e+03 | 1.16e+03 | 487 | 404 | FAIL (DOWN@warm leads) | FAIL |
+| 46 | 1.39e+03 | 1.72e+03 | 440 | 330 | PASS | PASS |
 
-Strong gate (`down < 0.92·up`): **4/5**. Weak inversion (`down < up`): **5/5** (rng=44 is weak-only: 141 vs 145).
+Flip gate (fixed 2026-08-21: `UP@warm < DOWN@warm` and `DOWN@late < 0.92·UP@late`):
+**1/5** (rng-46).  DOWN wins the late check (`DOWN@late < UP@late`) on **5/5**
+(rng-44 only by ≈3%, below the 8% margin).  The early-to-late *flip* occurs
+only on rng-46; on rngs 42–45 the DOWN gem is already visible at warm-up.
+This is why the paper cites the **quadruped** diag (5/5 genuine flips) for the
+inversion table and treats planar5 diag as a supporting diagnostic only.
 
 ## Writing guidance (for tex)
 - **Main claim (s_r allocation):** B1 feasible-first win rate + Table B3 (all-feasible cost gap).
 - **B1 wording:** Prefer “adaptive dominates Uniform under feasible-first ranking (5/5 RNGs)”.
 - **Greedy-χ negative control:** B1 (often worse feas/viol) + B3 (all feasible, mean cost 402 vs BO 270).
-- **Lemma 1 empirics:** existing Nav `tab:ranking_flip` + Table L2a (quadruped 5/5) + L2b (planar5 4/5 strong, 5/5 weak).
+- **Lemma 1 empirics:** existing Nav `tab:ranking_flip` + Table L2a (quadruped 5/5 genuine flips).  Planar5 diag: DOWN wins late 5/5 but the early-to-late flip only on rng-46 — cite the B3 policy suite for the cost separation instead.
 - **B2 suite:** near-tie footnote only; cite **diag** for theory.
 - Do **not** cite Franka Hard / spiral as Plan B primary benches.
 

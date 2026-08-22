@@ -6,7 +6,7 @@ seed,cluster,cost@warm,viol@warm,feas@warm,cost@late,viol@late,feas@late,chi@lat
 2,B,44.7181,0,1,13.0677,0,1,2.67068
 3,B,119.864,0,1,13.2094,0,1,2.67068
 best_A@warm=22.113 best_A@late=22.113 (feas 2/2)
-best_B@late=13.0677 (feas 2/2)
+best_B@warm=44.7181 best_B@late=13.0677 (feas 2/2)
 GATE B feasible late: PASS
-GATE inversion (B@late better than A): PASS
+GATE inversion (A@warm < B@warm and B@late < 0.92*A@late): PASS
 OVERALL: PASS

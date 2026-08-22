@@ -10,11 +10,12 @@ paper_numbers.json (the values as printed in the manuscript).  Any mismatch
 beyond tolerance fails the check (exit code 1).
 
 Tables covered:
-  * B1  Nav2D--Hard policy suite  (Table V)      -- nav2d_hard_multiseed.csv
-  * B3  Planar5 policy suite      (Table VI)     -- planar5_multiseed.csv
+  * B1  Nav2D--Hard policy suite  (Table VI)     -- nav2d_hard_multiseed.csv
+  * B3  Planar5 policy suite      (Table VII)    -- planar5_multiseed.csv
+  * B2  Quadruped suite (near-tie sanity, no paper table) -- quadruped_multiseed.csv
   * B2  Quadruped diag            (Table IV)     -- raw/quadruped_diag_4X.log
   * Ranking flip on Nav           (Table III)    -- ranking_flip_curves.csv
-  * Host Gate validation          (Table VII)    -- sota_baseline/*.csv
+  * Host Gate validation          (Table II)     -- sota_baseline/*.csv
   * Budget accounting (all suite rows must account exactly)
 """
 from __future__ import annotations
@@ -68,12 +69,22 @@ def main():
     json_path = root / "verify" / "paper_numbers.json"
     if "--json" in sys.argv:
         json_path = Path(sys.argv[sys.argv.index("--json") + 1])
+    if not json_path.is_file():
+        # Fresh run_freeze.sh output dirs have no verify/ subdir: fall back to
+        # the script's own paper_numbers.json.
+        json_path = Path(__file__).resolve().parent / "paper_numbers.json"
     exp = json.loads(json_path.read_text())
     traces = root / "traces"
     all_ok = True
 
+    # Layout: release root has traces/plan_b_freeze/; a fresh run_freeze.sh
+    # OUTPUT_DIR has the suite CSVs at its top level.  Resolve either.
+    freeze = traces / "plan_b_freeze"
+    if not freeze.is_dir() and (root / "nav2d_hard_multiseed.csv").is_file():
+        freeze = root
+
     # ------------------------------------------------------------------ B1
-    rows = load_csv(traces / "plan_b_freeze" / "nav2d_hard_multiseed.csv")
+    rows = load_csv(freeze / "nav2d_hard_multiseed.csv")
     agg = defaultdict(list)
     for r in rows:
         agg[r["policy_name"]].append(r)
@@ -97,7 +108,7 @@ def main():
     all_ok &= check(f"B1 budget accounting (all {len(rows)} rows exact)", not bad)
 
     # ------------------------------------------------------------------ B3
-    rows = load_csv(traces / "plan_b_freeze" / "planar5_multiseed.csv")
+    rows = load_csv(freeze / "planar5_multiseed.csv")
     agg = defaultdict(list)
     for r in rows:
         agg[r["policy_name"]].append(r)
@@ -112,11 +123,34 @@ def main():
         ok = (abs(m - want["cost_mean"]) <= TOL and abs(s - want["cost_std"]) <= TOL
               and feas == want["feas_count"])
         all_ok &= check(f"B3 {pol} cost={m:.2f}±{s:.2f} feas={feas}/{len(a)}", ok)
+    # Budget accounting
+    bad = [r for r in rows if int(r["budget_accounted"]) != 1]
+    all_ok &= check(f"B3 budget accounting (all {len(rows)} rows exact)", not bad)
+
+    # ------------------------------------------------------------------ B2 suite
+    rows = load_csv(freeze / "quadruped_multiseed.csv")
+    agg = defaultdict(list)
+    for r in rows:
+        agg[r["policy_name"]].append(r)
+    for pol, want in exp["B2_suite"].items():
+        a = agg.get(pol)
+        if not a:
+            all_ok = check(f"B2 {pol} present", False)
+            continue
+        costs = [float(x["final_cost"]) for x in a]
+        feas = sum(1 for x in a if int(x["feasible"]))
+        m, s = mean_std(costs)
+        ok = (abs(m - want["cost_mean"]) <= TOL and abs(s - want["cost_std"]) <= TOL
+              and feas == want["feas_count"])
+        all_ok &= check(f"B2 {pol} cost={m:.2f}±{s:.2f} feas={feas}/{len(a)}", ok)
+    # Budget accounting
+    bad = [r for r in rows if int(r["budget_accounted"]) != 1]
+    all_ok &= check(f"B2 budget accounting (all {len(rows)} rows exact)", not bad)
 
     # ------------------------------------------------------------------ B2 diag
     diag_want = exp["B2_diag"]
     for rng, want in diag_want.items():
-        log = traces / "plan_b_freeze" / "raw" / f"quadruped_diag_{rng}.log"
+        log = freeze / "raw" / f"quadruped_diag_{rng}.log"
         if not log.exists():
             all_ok &= check(f"B2 diag rng {rng} log present", False)
             continue
@@ -128,72 +162,79 @@ def main():
                         ok)
 
     # ------------------------------------------------------- ranking flip
-    flip_rows = load_csv(traces / "ranking_flip_curves.csv")
-    by_seed = defaultdict(list)
-    for r in flip_rows:
-        by_seed[int(r["seed"])].append(r)
-    for seed, want in exp["ranking_flip"].items():
-        rows0 = [r for r in by_seed[int(seed)] if int(r["batch"]) == 0]
-        if not rows0:
-            all_ok &= check(f"flip seed {seed} batch-0 row", False)
-            continue
-        r0 = rows0[0]
-        # oracle J*: last j_after across batches
-        jstar = min(float(r["j_after"]) for r in by_seed[int(seed)])
-        s_chi = float(r0["s_chi"])
-        s_r = float(r0["r_feas"])
-        ok = (abs(jstar - want["oracle_J"]) <= TOL
-              and abs(s_chi - want["s_chi_batch0"]) <= TOL
-              and abs(s_r - want["s_r_batch0"]) <= 1.0)
-        all_ok &= check(f"flip seed {seed} J*={jstar:.3f} s_chi={s_chi:.3f} "
-                        f"s_r={s_r:.2f}", ok)
-    # greedy picks: highest s_chi -> seed 1; highest s_r (tie -> first-seen) -> seed 0
-    s0 = {int(r["seed"]): [x for x in by_seed[int(r["seed"])] if int(x["batch"]) == 0][0]
-          for r in flip_rows}
-    greedy_chi = max(s0, key=lambda k: float(s0[k]["s_chi"]))
-    greedy_sr = max(s0, key=lambda k: float(s0[k]["r_feas"]))
-    all_ok &= check(f"flip greedy picks: s_chi->seed {greedy_chi} (want 1), "
-                    f"s_r->seed {greedy_sr} (want 0)",
-                    greedy_chi == 1 and greedy_sr == 0)
+    flip_csv = traces / "ranking_flip_curves.csv"
+    if not flip_csv.is_file():
+        print("[SKIP] ranking flip: not part of a run_freeze.sh output")
+    else:
+        flip_rows = load_csv(flip_csv)
+        by_seed = defaultdict(list)
+        for r in flip_rows:
+            by_seed[int(r["seed"])].append(r)
+        for seed, want in exp["ranking_flip"].items():
+            rows0 = [r for r in by_seed[int(seed)] if int(r["batch"]) == 0]
+            if not rows0:
+                all_ok &= check(f"flip seed {seed} batch-0 row", False)
+                continue
+            r0 = rows0[0]
+            # oracle J*: last j_after across batches
+            jstar = min(float(r["j_after"]) for r in by_seed[int(seed)])
+            chi = float(r0["chi"])
+            s_r = float(r0["r_feas"])
+            ok = (abs(jstar - want["oracle_J"]) <= TOL
+                  and abs(chi - want["chi_batch0"]) <= 1e-4
+                  and abs(s_r - want["s_r_batch0"]) <= 1.0)
+            all_ok &= check(f"flip seed {seed} J*={jstar:.3f} chi={chi:.5f} "
+                            f"s_r={s_r:.2f}", ok)
+        # greedy picks: lowest chi -> seed 1; highest s_r (tie -> first-seen) -> seed 0
+        s0 = {int(r["seed"]): [x for x in by_seed[int(r["seed"])] if int(x["batch"]) == 0][0]
+              for r in flip_rows}
+        greedy_chi = min(s0, key=lambda k: float(s0[k]["chi"]))
+        greedy_sr = max(s0, key=lambda k: float(s0[k]["r_feas"]))
+        all_ok &= check(f"flip greedy picks: chi->seed {greedy_chi} (want 1), "
+                        f"s_r->seed {greedy_sr} (want 0)",
+                        greedy_chi == 1 and greedy_sr == 0)
 
     # ------------------------------------------------------------------ gate
     base = traces / "sota_baseline"
-    ours = load_csv(base / "optimal_solver.csv")
-    sota_rows = load_csv(base / "crocoddyl.csv") + load_csv(base / "aligator.csv") \
-        + load_csv(base / "altro.csv")
-    all_ok &= check(f"Gate: ours 15 rows, {sum(int(r['feasible']) for r in ours)} feasible",
-                    len(ours) == 15 and all(int(r["feasible"]) == 1 for r in ours))
-    best_sota = {}
-    for r in sota_rows:
-        if int(r["feasible"]) != 1:
-            continue
-        k = (r["problem"], int(r["seed"]))
-        v = float(r["final_cost"])
-        if k not in best_sota or v < best_sota[k]:
-            best_sota[k] = v
-    by_prob = defaultdict(list)
-    for r in ours:
-        by_prob[r["problem"]].append(float(r["final_cost"]))
-    for prob, want in exp["gate"].items():
-        costs = by_prob.get(prob)
-        if not costs:
-            all_ok &= check(f"Gate {prob}: missing data", False)
-            continue
-        # Per-instance ratio: ours(problem,seed) / best feasible SOTA(problem,seed).
-        ratios = []
+    if not (base / "optimal_solver.csv").is_file():
+        print("[SKIP] Gate validation: not part of a run_freeze.sh output")
+    else:
+        ours = load_csv(base / "optimal_solver.csv")
+        sota_rows = load_csv(base / "crocoddyl.csv") + load_csv(base / "aligator.csv") \
+            + load_csv(base / "altro.csv")
+        all_ok &= check(f"Gate: ours 15 rows, {sum(int(r['feasible']) for r in ours)} feasible",
+                        len(ours) == 15 and all(int(r["feasible"]) == 1 for r in ours))
+        best_sota = {}
+        for r in sota_rows:
+            if int(r["feasible"]) != 1:
+                continue
+            k = (r["problem"], int(r["seed"]))
+            v = float(r["final_cost"])
+            if k not in best_sota or v < best_sota[k]:
+                best_sota[k] = v
+        by_prob = defaultdict(list)
         for r in ours:
-            if r["problem"] != prob:
+            by_prob[r["problem"]].append(float(r["final_cost"]))
+        for prob, want in exp["gate"].items():
+            costs = by_prob.get(prob)
+            if not costs:
+                all_ok &= check(f"Gate {prob}: missing data", False)
                 continue
-            k = (prob, int(r["seed"]))
-            if k not in best_sota:
-                continue
-            ratios.append(float(r["final_cost"]) / best_sota[k])
-        max_ratio = max(ratios) if ratios else float("inf")
-        ok = (want["feasible"] == 15 and max_ratio <= want["max_ratio"]
-              and min(costs) >= want["cost_min"] * (1 - TOL)
-              and max(costs) <= want["cost_max"] * (1 + TOL))
-        all_ok &= check(f"Gate {prob}: ours [{min(costs):.1f},{max(costs):.1f}] "
-                        f"max per-seed ratio vs best SOTA {max_ratio:.4f}", ok)
+            # Per-instance ratio: ours(problem,seed) / best feasible SOTA(problem,seed).
+            ratios = []
+            for r in ours:
+                if r["problem"] != prob:
+                    continue
+                k = (prob, int(r["seed"]))
+                if k not in best_sota:
+                    continue
+                ratios.append(float(r["final_cost"]) / best_sota[k])
+            max_ratio = max(ratios) if ratios else float("inf")
+            ok = (want["feasible"] == 15 and max_ratio <= want["max_ratio"]
+                  and min(costs) >= want["cost_min"] * (1 - TOL)
+                  and max(costs) <= want["cost_max"] * (1 + TOL))
+            all_ok &= check(f"Gate {prob}: ours [{min(costs):.1f},{max(costs):.1f}] "
+                            f"max per-seed ratio vs best SOTA {max_ratio:.4f}", ok)
 
     print("-" * 60)
     print("RESULT:", "ALL CHECKS PASS" if all_ok else "MISMATCHES FOUND")
